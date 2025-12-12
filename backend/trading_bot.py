@@ -240,10 +240,10 @@ class TradingBot:
     
     async def _on_contract_update(self, result: ContractResult):
         """Handle contract completion."""
-        logger.info(f"_on_contract_update called: contract_id={result.contract_id}, pending={self.pending_contract_id}")
+        logger.info(f"_on_contract_update called: contract_id={result.contract_id} (type={type(result.contract_id).__name__}), pending={self.pending_contract_id} (type={type(self.pending_contract_id).__name__})")
         
-        # Skip if this contract was already processed
-        if result.contract_id != self.pending_contract_id:
+        # Skip if this contract was already processed (compare as strings to avoid type mismatch)
+        if str(result.contract_id) != str(self.pending_contract_id):
             logger.warning(f"Ignoring update for contract {result.contract_id} (pending: {self.pending_contract_id})")
             return
         
