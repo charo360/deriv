@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BotState, WebSocketMessage } from '../types';
 
-const WS_URL = `ws://${window.location.hostname}:8000/ws`;
+const apiBaseFromEnv =
+  (import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE_URL;
+const wsBase =
+  apiBaseFromEnv?.replace(/^http/i, (match) =>
+    match.toLowerCase() === 'https' ? 'wss' : 'ws'
+  ) || `ws://${window.location.hostname}:8000`;
+const WS_URL = `${wsBase.replace(/\/$/, '')}/ws`;
 
 export function useWebSocket() {
   const [state, setState] = useState<BotState | null>(null);

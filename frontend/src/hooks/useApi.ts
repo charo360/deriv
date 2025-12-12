@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 
-const API_BASE = `http://${window.location.hostname}:8000/api`;
+const apiBaseFromEnv =
+  (import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE_URL;
+const API_BASE = (apiBaseFromEnv || `http://${window.location.hostname}:8000`)
+  .replace(/\/$/, '') + '/api';
 
 export function useApi() {
   const [loading, setLoading] = useState(false);
