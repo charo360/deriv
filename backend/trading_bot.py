@@ -10,6 +10,7 @@ import pytz
 from deriv_client import DerivClient, ContractResult
 from strategy import MeanReversionStrategy, Signal, TradeSignal
 from risk_manager import RiskManager, TradeRecord, TradeResult
+from trade_recorder import trade_recorder
 from config import trading_config
 
 logging.basicConfig(level=logging.INFO)
@@ -266,6 +267,31 @@ class TradingBot:
         
         self.risk_manager.record_trade(trade)
         logger.info(f"Trade recorded: {trade.result.value}, total trades: {len(self.risk_manager.all_trades)}")
+        
+        # Record trade to CSV with full indicator values for analysis
+        signal_data = None
+        if self.current_signal:
+            signal_data = {
+                'confidence': self.current_signal.confidence,
+                'confluence_factors': self.current_signal.confluence_factors,
+                'indicators': self.current_signal.indicators,
+                'm1_confirmed': self.current_signal.m1_confirmed,
+                'm5_confirmed': self.current_signal.m5_confirmed,
+                'm15_confirmed': self.current_signal.m15_confirmed
+            }
+        
+        trade_recorder.record_trade(
+            contract_id=result.contract_id,
+            symbol=self.symbol,
+            direction=self.current_signal.signal.value if self.current_signal else "UNKNOWN",
+            result=trade.result.value,
+            stake=result.buy_price,
+            payout=result.sell_price,
+            profit=result.profit,
+            entry_price=result.entry_spot,
+            exit_price=result.exit_spot,
+            signal_data=signal_data
+        )
         
         # Clear pending contract and release lock
         self.pending_contract_id = None

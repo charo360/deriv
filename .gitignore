@@ -14,3 +14,6 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# Trade records (CSV files with indicator data)
+backend/trade_records/*.csv

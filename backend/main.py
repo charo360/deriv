@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from trading_bot import TradingBot
+from trade_recorder import trade_recorder
 from config import trading_config, server_config
 
 logging.basicConfig(level=logging.INFO)
@@ -227,6 +228,21 @@ async def update_settings(settings: SettingsUpdate):
         bot.risk_manager.max_martingale_steps = trading_config.max_martingale_steps
     
     return {"success": True, "settings": settings.model_dump()}
+
+
+@app.get("/api/records")
+async def get_trade_records(limit: int = 50):
+    """Get recorded trades with full indicator values for analysis."""
+    return {
+        "records": trade_recorder.get_recent_records(limit),
+        "summary": trade_recorder.get_records_summary()
+    }
+
+
+@app.get("/api/records/summary")
+async def get_records_summary():
+    """Get summary statistics of all recorded trades."""
+    return trade_recorder.get_records_summary()
 
 
 @app.websocket("/ws")
