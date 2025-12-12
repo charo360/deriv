@@ -339,29 +339,41 @@ class DerivClient:
         contract = data.get("proposal_open_contract", {})
         contract_id = str(contract.get("contract_id", ""))
         
-        if contract_id:
-            self.active_contracts[contract_id] = contract
+        if not contract_id:
+            logger.debug("Contract update with no contract_id, skipping")
+            return
+        
+        # Check if contract is settled
+        is_sold = contract.get("is_sold", 0) == 1
+        is_expired = contract.get("is_expired", 0) == 1
+        is_valid_to_sell = contract.get("is_valid_to_sell", 0) == 1
+        status = contract.get("status", "")
+        
+        logger.info(f"Contract {contract_id} update: is_sold={is_sold}, is_expired={is_expired}, status={status}")
+        
+        self.active_contracts[contract_id] = contract
+        
+        if is_sold or is_expired:
+            # Contract is complete
+            profit = float(contract.get("profit", 0))
+            result = ContractResult(
+                contract_id=contract_id,
+                buy_price=float(contract.get("buy_price", 0)),
+                sell_price=float(contract.get("sell_price", 0)),
+                profit=profit,
+                entry_spot=float(contract.get("entry_spot", 0)),
+                exit_spot=float(contract.get("exit_spot", 0)),
+                is_win=profit > 0,
+                is_sold=is_sold
+            )
             
-            # Check if contract is settled
-            is_sold = contract.get("is_sold", 0) == 1
-            is_expired = contract.get("is_expired", 0) == 1
+            logger.info(f"Contract {contract_id} SETTLED: profit={profit}, is_win={result.is_win}")
             
-            if is_sold or is_expired:
-                result = ContractResult(
-                    contract_id=contract_id,
-                    buy_price=float(contract.get("buy_price", 0)),
-                    sell_price=float(contract.get("sell_price", 0)),
-                    profit=float(contract.get("profit", 0)),
-                    entry_spot=float(contract.get("entry_spot", 0)),
-                    exit_spot=float(contract.get("exit_spot", 0)),
-                    is_win=float(contract.get("profit", 0)) > 0,
-                    is_sold=is_sold
-                )
-                
-                if self.on_contract_update:
-                    await self.on_contract_update(result)
-                
-                # Remove from active
+            if self.on_contract_update:
+                await self.on_contract_update(result)
+            
+            # Remove from active
+            if contract_id in self.active_contracts:
                 del self.active_contracts[contract_id]
     
     async def _handle_buy_response(self, data: dict):

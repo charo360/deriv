@@ -240,9 +240,11 @@ class TradingBot:
     
     async def _on_contract_update(self, result: ContractResult):
         """Handle contract completion."""
+        logger.info(f"_on_contract_update called: contract_id={result.contract_id}, pending={self.pending_contract_id}")
+        
         # Skip if this contract was already processed
         if result.contract_id != self.pending_contract_id:
-            logger.debug(f"Ignoring update for contract {result.contract_id} (pending: {self.pending_contract_id})")
+            logger.warning(f"Ignoring update for contract {result.contract_id} (pending: {self.pending_contract_id})")
             return
         
         logger.info(f"Contract {result.contract_id} completed: {'WIN' if result.is_win else 'LOSS'}, Profit: {result.profit}")
@@ -263,11 +265,14 @@ class TradingBot:
         )
         
         self.risk_manager.record_trade(trade)
+        logger.info(f"Trade recorded: {trade.result.value}, total trades: {len(self.risk_manager.all_trades)}")
+        
+        # Clear pending contract and release lock
         self.pending_contract_id = None
-        self.trade_in_progress = False  # Release lock when contract completes
+        self.trade_in_progress = False
         self.trade_lock_time = None
         
-        logger.info("Trade completed, ready for next signal")
+        logger.info("Trade completed and lock released, ready for next signal")
         await self._broadcast_state()
     
     async def _broadcast_state(self):
