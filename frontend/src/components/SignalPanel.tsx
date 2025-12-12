@@ -1,0 +1,152 @@
+import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { SignalInfo } from '../types';
+
+interface SignalPanelProps {
+  signal: SignalInfo | null;
+  pendingContract: string | null;
+}
+
+export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
+  if (!signal) {
+    return (
+      <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
+        <h2 className="text-lg font-semibold mb-4">Current Signal</h2>
+        <div className="text-center py-8 text-gray-400">
+          <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>Waiting for market data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isRise = signal.signal === 'CALL';
+  const isFall = signal.signal === 'PUT';
+  const hasSignal = isRise || isFall;
+
+  return (
+    <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
+      <h2 className="text-lg font-semibold mb-4">Current Signal</h2>
+
+      {/* Signal Display */}
+      <div className={`rounded-lg p-4 mb-4 ${
+        isRise ? 'bg-deriv-green/20 border border-deriv-green' :
+        isFall ? 'bg-deriv-red/20 border border-deriv-red' :
+        'bg-deriv-dark border border-deriv-light'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isRise && <TrendingUp className="w-8 h-8 text-deriv-green" />}
+            {isFall && <TrendingDown className="w-8 h-8 text-deriv-red" />}
+            {!hasSignal && <Clock className="w-8 h-8 text-gray-400" />}
+            <div>
+              <p className={`text-2xl font-bold ${
+                isRise ? 'text-deriv-green' : isFall ? 'text-deriv-red' : 'text-gray-400'
+              }`}>
+                {isRise ? 'RISE' : isFall ? 'FALL' : 'NO SIGNAL'}
+              </p>
+              <p className="text-sm text-gray-400">
+                Price: {signal.price.toFixed(5)}
+              </p>
+            </div>
+          </div>
+          
+          {hasSignal && (
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Confidence</p>
+              <p className={`text-2xl font-bold ${
+                signal.confidence >= 80 ? 'text-deriv-green' :
+                signal.confidence >= 60 ? 'text-yellow-500' : 'text-gray-400'
+              }`}>
+                {signal.confidence}%
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pending Contract */}
+      {pendingContract && (
+        <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-sm">Contract Active: {pendingContract}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Timeframe Confirmations */}
+      <div className="mb-4">
+        <p className="text-sm text-gray-400 mb-2">Timeframe Confluence</p>
+        <div className="flex gap-2">
+          {[
+            { label: 'M15', confirmed: signal.m15_confirmed },
+            { label: 'M5', confirmed: signal.m5_confirmed },
+            { label: 'M1', confirmed: signal.m1_confirmed },
+          ].map((tf) => (
+            <div
+              key={tf.label}
+              className={`flex items-center gap-1 px-3 py-1 rounded ${
+                tf.confirmed ? 'bg-deriv-green/20 text-deriv-green' : 'bg-deriv-dark text-gray-400'
+              }`}
+            >
+              {tf.confirmed ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              <span className="text-sm font-medium">{tf.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Confluence Factors */}
+      <div>
+        <p className="text-sm text-gray-400 mb-2">Confluence Factors</p>
+        <div className="space-y-1 max-h-32 overflow-y-auto">
+          {signal.confluence_factors.map((factor, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm">
+              <CheckCircle className="w-4 h-4 text-deriv-green flex-shrink-0 mt-0.5" />
+              <span>{factor}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Indicators */}
+      {signal.indicators && hasSignal && (
+        <div className="mt-4 pt-4 border-t border-deriv-light">
+          <p className="text-sm text-gray-400 mb-2">M5 Indicators</p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-gray-400">RSI:</span>
+              <span className={`ml-2 font-medium ${
+                signal.indicators.m5.rsi < 30 ? 'text-deriv-green' :
+                signal.indicators.m5.rsi > 70 ? 'text-deriv-red' : 'text-gray-300'
+              }`}>
+                {signal.indicators.m5.rsi.toFixed(1)}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Stoch K:</span>
+              <span className={`ml-2 font-medium ${
+                signal.indicators.m5.stoch_k < 20 ? 'text-deriv-green' :
+                signal.indicators.m5.stoch_k > 80 ? 'text-deriv-red' : 'text-gray-300'
+              }`}>
+                {signal.indicators.m5.stoch_k.toFixed(1)}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">BB Upper:</span>
+              <span className="ml-2 font-medium">{signal.indicators.m5.bb_upper.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">BB Lower:</span>
+              <span className="ml-2 font-medium">{signal.indicators.m5.bb_lower.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
