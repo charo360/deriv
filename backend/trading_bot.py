@@ -52,6 +52,7 @@ class TradingBot:
         self.is_running = False
         self.is_trading_enabled = False
         self.current_signal: Optional[TradeSignal] = None
+        self.pending_signal: Optional[TradeSignal] = None  # Signal that was used for pending trade
         self.last_trade_time: Optional[datetime] = None
         self.pending_contract_id: Optional[str] = None
         self.trade_in_progress = False  # Lock to prevent multiple trades
@@ -220,6 +221,7 @@ class TradingBot:
             )
             
             self.pending_contract_id = result["contract_id"]
+            self.pending_signal = signal  # Save the signal used for this trade
             self.last_trade_time = datetime.now(pytz.UTC)
             
             logger.info(f"Contract purchased: {result['contract_id']}, Payout: {result['payout']}")
@@ -257,40 +259,43 @@ class TradingBot:
         
         logger.info(f"Contract {result.contract_id} completed: {'WIN' if result.is_win else 'LOSS'}, Profit: {result.profit}")
         
+        # Use pending_signal (saved at trade execution) for correct direction
+        signal_used = self.pending_signal or self.current_signal
+        
         # Record trade
         trade = TradeRecord(
             id=result.contract_id,
             timestamp=datetime.now(pytz.UTC),
             symbol=self.symbol,
-            direction=self.current_signal.signal.value if self.current_signal else "UNKNOWN",
+            direction=signal_used.signal.value if signal_used else "UNKNOWN",
             stake=result.buy_price,
             payout=result.sell_price,
             result=TradeResult.WIN if result.is_win else TradeResult.LOSS,
             profit=result.profit,
             entry_price=result.entry_spot,
             exit_price=result.exit_spot,
-            indicators=self.current_signal.indicators if self.current_signal else {}
+            indicators=signal_used.indicators if signal_used else {}
         )
         
         self.risk_manager.record_trade(trade)
-        logger.info(f"Trade recorded: {trade.result.value}, total trades: {len(self.risk_manager.all_trades)}")
+        logger.info(f"Trade recorded: {trade.direction} {trade.result.value}, total trades: {len(self.risk_manager.all_trades)}")
         
         # Record trade to CSV with full indicator values for analysis
         signal_data = None
-        if self.current_signal:
+        if signal_used:
             signal_data = {
-                'confidence': self.current_signal.confidence,
-                'confluence_factors': self.current_signal.confluence_factors,
-                'indicators': self.current_signal.indicators,
-                'm1_confirmed': self.current_signal.m1_confirmed,
-                'm5_confirmed': self.current_signal.m5_confirmed,
-                'm15_confirmed': self.current_signal.m15_confirmed
+                'confidence': signal_used.confidence,
+                'confluence_factors': signal_used.confluence_factors,
+                'indicators': signal_used.indicators,
+                'm1_confirmed': signal_used.m1_confirmed,
+                'm5_confirmed': signal_used.m5_confirmed,
+                'm15_confirmed': signal_used.m15_confirmed
             }
         
         trade_recorder.record_trade(
             contract_id=result.contract_id,
             symbol=self.symbol,
-            direction=self.current_signal.signal.value if self.current_signal else "UNKNOWN",
+            direction=signal_used.signal.value if signal_used else "UNKNOWN",
             result=trade.result.value,
             stake=result.buy_price,
             payout=result.sell_price,
@@ -302,6 +307,7 @@ class TradingBot:
         
         # Clear pending contract and release lock
         self.pending_contract_id = None
+        self.pending_signal = None
         self.trade_in_progress = False
         self.trade_lock_time = None
         
