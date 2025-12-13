@@ -54,6 +54,7 @@ class TradingBot:
         self.current_signal: Optional[TradeSignal] = None
         self.pending_signal: Optional[TradeSignal] = None  # Signal that was used for pending trade
         self.last_trade_time: Optional[datetime] = None
+        self.last_trade_direction: Optional[str] = None  # Track last trade direction to avoid flip-flopping
         self.pending_contract_id: Optional[str] = None
         self.trade_in_progress = False  # Lock to prevent multiple trades
         self.trade_lock_time: Optional[datetime] = None  # Timestamp when lock set
@@ -63,6 +64,7 @@ class TradingBot:
         self.trade_duration = trading_config.trade_duration
         self.trade_duration_unit = trading_config.trade_duration_unit
         self.min_trade_interval = 60  # Minimum seconds between trades
+        self.min_opposite_signal_interval = 300  # 5 minutes before allowing opposite direction trade
     
     async def start(self):
         """Start the trading bot."""
@@ -181,6 +183,14 @@ class TradingBot:
             elapsed = (datetime.now(pytz.UTC) - self.last_trade_time).total_seconds()
             if elapsed < self.min_trade_interval:
                 return
+            
+            # Prevent flip-flopping: require longer wait before taking opposite direction
+            if self.last_trade_direction:
+                current_direction = signal.signal.value
+                if current_direction != self.last_trade_direction:
+                    if elapsed < self.min_opposite_signal_interval:
+                        logger.info(f"Skipping {current_direction} - too soon after {self.last_trade_direction} (wait {self.min_opposite_signal_interval - elapsed:.0f}s more)")
+                        return
         
         # Reset stale trade lock (e.g., manual trade canceled mid-way)
         if self.trade_in_progress and not self.pending_contract_id:
@@ -223,6 +233,7 @@ class TradingBot:
             self.pending_contract_id = result["contract_id"]
             self.pending_signal = signal  # Save the signal used for this trade
             self.last_trade_time = datetime.now(pytz.UTC)
+            self.last_trade_direction = contract_type  # Track direction to prevent flip-flopping
             
             logger.info(f"Contract purchased: {result['contract_id']}, Payout: {result['payout']}")
             
