@@ -31,6 +31,19 @@ class IndicatorValues:
     
     # EMA
     ema_200: float
+    ema_50: float
+    
+    # ADX - Trend Strength
+    adx: float
+    plus_di: float
+    minus_di: float
+    
+    # MACD - Momentum
+    macd: float
+    macd_signal: float
+    macd_histogram: float
+    macd_bullish: bool  # MACD > Signal and histogram positive
+    macd_bearish: bool  # MACD < Signal and histogram negative
     
     # Derived signals
     price_at_lower_bb: bool
@@ -41,6 +54,12 @@ class IndicatorValues:
     stoch_overbought: bool
     above_ema: bool
     below_ema: bool
+    
+    # Trend signals
+    is_trending: bool  # ADX > 25
+    is_ranging: bool   # ADX < 20
+    trend_up: bool     # +DI > -DI and price above EMA50
+    trend_down: bool   # -DI > +DI and price below EMA50
 
 
 class TechnicalIndicators:
@@ -128,6 +147,39 @@ class TechnicalIndicators:
         )
         ema_200 = ema.ema_indicator().iloc[-1]
         
+        # EMA 50 for trend direction
+        ema_50_ind = ta.trend.EMAIndicator(
+            close=df['close'],
+            window=50
+        )
+        ema_50 = ema_50_ind.ema_indicator().iloc[-1]
+        
+        # ADX - Average Directional Index for trend strength
+        adx_indicator = ta.trend.ADXIndicator(
+            high=df['high'],
+            low=df['low'],
+            close=df['close'],
+            window=14
+        )
+        adx = adx_indicator.adx().iloc[-1]
+        plus_di = adx_indicator.adx_pos().iloc[-1]
+        minus_di = adx_indicator.adx_neg().iloc[-1]
+        
+        # MACD - Momentum confirmation
+        macd_indicator = ta.trend.MACD(
+            close=df['close'],
+            window_slow=26,
+            window_fast=12,
+            window_sign=9
+        )
+        macd = macd_indicator.macd().iloc[-1]
+        macd_signal = macd_indicator.macd_signal().iloc[-1]
+        macd_histogram = macd_indicator.macd_diff().iloc[-1]
+        
+        # MACD momentum signals
+        macd_bullish = macd > macd_signal and macd_histogram > 0
+        macd_bearish = macd < macd_signal and macd_histogram < 0
+        
         # Current price
         close = df['close'].iloc[-1]
         high = df['high'].iloc[-1]
@@ -143,6 +195,12 @@ class TechnicalIndicators:
         above_ema = close > ema_200
         below_ema = close < ema_200
         
+        # Trend signals
+        is_trending = adx > 25
+        is_ranging = adx < 20
+        trend_up = plus_di > minus_di and close > ema_50
+        trend_down = minus_di > plus_di and close < ema_50
+        
         return IndicatorValues(
             close=close,
             high=high,
@@ -155,6 +213,15 @@ class TechnicalIndicators:
             stoch_k=stoch_k,
             stoch_d=stoch_d,
             ema_200=ema_200,
+            ema_50=ema_50,
+            adx=adx,
+            plus_di=plus_di,
+            minus_di=minus_di,
+            macd=macd,
+            macd_signal=macd_signal,
+            macd_histogram=macd_histogram,
+            macd_bullish=macd_bullish,
+            macd_bearish=macd_bearish,
             price_at_lower_bb=price_at_lower_bb,
             price_at_upper_bb=price_at_upper_bb,
             rsi_oversold=rsi_oversold,
@@ -162,7 +229,11 @@ class TechnicalIndicators:
             stoch_oversold=stoch_oversold,
             stoch_overbought=stoch_overbought,
             above_ema=above_ema,
-            below_ema=below_ema
+            below_ema=below_ema,
+            is_trending=is_trending,
+            is_ranging=is_ranging,
+            trend_up=trend_up,
+            trend_down=trend_down
         )
     
     def detect_divergence(

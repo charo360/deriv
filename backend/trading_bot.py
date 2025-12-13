@@ -8,7 +8,7 @@ import uuid
 import pytz
 
 from deriv_client import DerivClient, ContractResult
-from strategy import MeanReversionStrategy, Signal, TradeSignal
+from strategy import HybridAdaptiveStrategy, Signal, TradeSignal
 from risk_manager import RiskManager, TradeRecord, TradeResult
 from trade_recorder import trade_recorder
 from config import trading_config
@@ -38,7 +38,7 @@ class TradingBot:
         
         # Components
         self.client: Optional[DerivClient] = None
-        self.strategy = MeanReversionStrategy()
+        self.strategy = HybridAdaptiveStrategy()
         self.risk_manager = RiskManager(
             initial_balance=initial_balance,
             initial_stake=trading_config.initial_stake,
