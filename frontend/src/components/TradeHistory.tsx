@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download } from 'lucide-react';
 import { Trade } from '../types';
 
 interface TradeHistoryProps {
@@ -6,6 +6,42 @@ interface TradeHistoryProps {
 }
 
 export function TradeHistory({ trades }: TradeHistoryProps) {
+  const downloadCSV = () => {
+    if (trades.length === 0) return;
+    
+    // CSV headers
+    const headers = ['Time', 'Direction', 'Stake', 'Profit', 'Result', 'Entry Price', 'Exit Price', 'Confidence'];
+    
+    // CSV rows
+    const rows = trades.map(trade => [
+      new Date(trade.timestamp).toLocaleString(),
+      trade.direction === 'CALL' ? 'RISE' : 'FALL',
+      trade.stake.toFixed(2),
+      trade.profit.toFixed(2),
+      trade.result.toUpperCase(),
+      trade.entry_price?.toFixed(5) || '',
+      trade.exit_price?.toFixed(5) || '',
+      trade.confidence?.toFixed(1) || ''
+    ]);
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trade_history_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (trades.length === 0) {
     return (
       <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
@@ -19,7 +55,16 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
 
   return (
     <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
-      <h2 className="text-lg font-semibold mb-4">Trade History</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Trade History</h2>
+        <button
+          onClick={downloadCSV}
+          className="flex items-center gap-2 px-3 py-1.5 bg-deriv-green/20 text-deriv-green rounded hover:bg-deriv-green/30 transition-colors text-sm"
+        >
+          <Download className="w-4 h-4" />
+          Download CSV
+        </button>
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
