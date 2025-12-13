@@ -26,8 +26,8 @@ class TradingConfig(BaseModel):
     
     # Risk Management
     max_martingale_steps: int = int(os.getenv("MAX_MARTINGALE_STEPS", "3"))
-    max_daily_trades: int = 10
-    max_daily_loss_percent: float = 10.0
+    max_daily_trades: int = int(os.getenv("MAX_DAILY_TRADES", "1000"))
+    max_daily_loss_percent: float = float(os.getenv("MAX_DAILY_LOSS_PERCENT", "10.0"))
     
     # Indicator Settings
     bollinger_period: int = 20
