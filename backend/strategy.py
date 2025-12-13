@@ -155,11 +155,11 @@ class MeanReversionStrategy:
         logger.info(f"M15: close={ind_m15.close:.2f}, EMA200={ind_m15.ema_200:.2f}, above_ema={ind_m15.above_ema}, below_ema={ind_m15.below_ema}")
         logger.info(f"RISE confidence: {rise_signal.confidence}, FALL confidence: {fall_signal.confidence}")
         
-        # Return the stronger signal (minimum 70% confidence required)
-        if rise_signal.confidence > fall_signal.confidence and rise_signal.confidence >= 70:
+        # Return the stronger signal (minimum 60% confidence required)
+        if rise_signal.confidence > fall_signal.confidence and rise_signal.confidence >= 60:
             logger.info(f">>> SELECTED: RISE with {rise_signal.confidence}% confidence")
             return rise_signal
-        elif fall_signal.confidence > rise_signal.confidence and fall_signal.confidence >= 70:
+        elif fall_signal.confidence > rise_signal.confidence and fall_signal.confidence >= 60:
             logger.info(f">>> SELECTED: FALL with {fall_signal.confidence}% confidence")
             return fall_signal
         

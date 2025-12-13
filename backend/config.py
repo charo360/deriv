@@ -16,7 +16,7 @@ class TradingConfig(BaseModel):
     app_id: int = int(os.getenv("DERIV_APP_ID", "1089"))
     
     # Symbol Configuration
-    symbol: str = os.getenv("SYMBOL", "R_75")  # R_75 = Volatility 75 Index
+    symbol: str = os.getenv("SYMBOL", "R_10")  # R_10 = Volatility 10 Index
     
     # Trade Parameters
     initial_stake: float = float(os.getenv("INITIAL_STAKE", "10"))
