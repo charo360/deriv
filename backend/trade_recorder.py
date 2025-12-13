@@ -275,6 +275,25 @@ class TradeRecorder:
         
         # Return most recent first
         return all_records[-limit:][::-1]
+    
+    def get_todays_records(self) -> List[Dict]:
+        """Get all trade records from today."""
+        today = datetime.now(pytz.UTC).date()
+        all_records = []
+        
+        if os.path.exists(self.current_file):
+            with open(self.current_file, 'r') as f:
+                reader = csv.DictReader(f)
+                for record in reader:
+                    try:
+                        # Parse timestamp and check if it's today
+                        ts = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00'))
+                        if ts.date() == today:
+                            all_records.append(record)
+                    except (ValueError, KeyError):
+                        continue
+        
+        return all_records
 
 
 # Global recorder instance

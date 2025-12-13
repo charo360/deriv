@@ -2,8 +2,11 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime, date
-from typing import List, Optional
+from typing import List, Optional, Dict
 from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TradeResult(Enum):
@@ -71,6 +74,50 @@ class RiskManager:
         self.session_start_balance = initial_balance
         self.total_wins = 0
         self.total_losses = 0
+    
+    def load_trades_from_records(self, records: List[Dict]):
+        """Load trades from saved records (e.g., from CSV on restart)."""
+        for record in records:
+            try:
+                result_str = record.get('result', '').lower()
+                if result_str == 'win':
+                    result = TradeResult.WIN
+                elif result_str == 'loss':
+                    result = TradeResult.LOSS
+                else:
+                    result = TradeResult.TIE
+                
+                trade = TradeRecord(
+                    id=record.get('contract_id', ''),
+                    timestamp=datetime.fromisoformat(record.get('timestamp', '').replace('Z', '+00:00')),
+                    symbol=record.get('symbol', ''),
+                    direction=record.get('direction', ''),
+                    stake=float(record.get('stake', 0)),
+                    payout=float(record.get('payout', 0)),
+                    result=result,
+                    profit=float(record.get('profit', 0)),
+                    entry_price=float(record.get('entry_price', 0)),
+                    exit_price=float(record.get('exit_price', 0)),
+                    indicators={}
+                )
+                
+                self.all_trades.append(trade)
+                self.daily_trades.append(trade)
+                
+                # Update stats
+                if result == TradeResult.WIN:
+                    self.total_wins += 1
+                elif result == TradeResult.LOSS:
+                    self.total_losses += 1
+                
+                # Update balance
+                self.current_balance += trade.profit
+                
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Failed to load trade record: {e}")
+                continue
+        
+        logger.info(f"Loaded {len(records)} trades from records. Balance: {self.current_balance}")
     
     def reset_daily_stats(self):
         """Reset daily tracking at start of new day."""

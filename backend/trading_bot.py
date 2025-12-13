@@ -67,6 +67,12 @@ class TradingBot:
         """Start the trading bot."""
         logger.info("Starting trading bot...")
         
+        # Load today's trades from saved records (persist history across restarts)
+        todays_records = trade_recorder.get_todays_records()
+        if todays_records:
+            logger.info(f"Loading {len(todays_records)} trades from today's records...")
+            self.risk_manager.load_trades_from_records(todays_records)
+        
         # Initialize Deriv client
         self.client = DerivClient(
             api_token=self.api_token,
@@ -81,10 +87,11 @@ class TradingBot:
             # Connect and authorize
             await self.client.connect()
             
-            # Update balance from account
+            # Update balance from account (but keep profit/loss from loaded trades)
+            loaded_profit = sum(t.profit for t in self.risk_manager.all_trades)
+            self.risk_manager.initial_balance = self.client.balance - loaded_profit
+            self.risk_manager.session_start_balance = self.client.balance - loaded_profit
             self.risk_manager.current_balance = self.client.balance
-            self.risk_manager.initial_balance = self.client.balance
-            self.risk_manager.session_start_balance = self.client.balance
             
             # Subscribe to market data
             await self.client.subscribe_ticks(self.symbol)
