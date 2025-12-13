@@ -9,8 +9,10 @@ from datetime import datetime
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
+import os
 
 from trading_bot import TradingBot
 from trade_recorder import trade_recorder
@@ -243,6 +245,38 @@ async def get_trade_records(limit: int = 50):
 async def get_records_summary():
     """Get summary statistics of all recorded trades."""
     return trade_recorder.get_records_summary()
+
+
+@app.get("/api/records/download")
+async def download_records():
+    """Download the current month's trade records as CSV."""
+    csv_path = trade_recorder.current_file
+    if not os.path.exists(csv_path):
+        raise HTTPException(status_code=404, detail="No trade records found")
+    
+    filename = os.path.basename(csv_path)
+    return FileResponse(
+        path=csv_path,
+        filename=filename,
+        media_type="text/csv"
+    )
+
+
+@app.get("/api/records/download/{year}/{month}")
+async def download_records_by_month(year: int, month: int):
+    """Download trade records for a specific month as CSV."""
+    filename = f"trades_{year}_{month:02d}.csv"
+    records_dir = os.path.dirname(trade_recorder.current_file)
+    csv_path = os.path.join(records_dir, filename)
+    
+    if not os.path.exists(csv_path):
+        raise HTTPException(status_code=404, detail=f"No records found for {year}-{month:02d}")
+    
+    return FileResponse(
+        path=csv_path,
+        filename=filename,
+        media_type="text/csv"
+    )
 
 
 @app.websocket("/ws")
