@@ -65,8 +65,8 @@ class TradingBot:
         self.symbol = trading_config.symbol
         self.trade_duration = trading_config.trade_duration
         self.trade_duration_unit = trading_config.trade_duration_unit
-        self.min_trade_interval = 180  # Minimum seconds between trades (3 minutes for better quality)
-        self.min_opposite_signal_interval = 300  # 5 minutes before allowing opposite direction trade
+        self.min_trade_interval = 60  # Minimum seconds between trades (1 minute)
+        self.min_opposite_signal_interval = 120  # 2 minutes before allowing opposite direction trade
     
     async def start(self):
         """Start the trading bot."""
