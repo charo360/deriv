@@ -72,7 +72,25 @@ class HybridAdaptiveStrategy:
     RANGING Mode (ADX < 20):
     - Use classic mean reversion at BB extremes
     - RSI oversold/overbought for confirmation
+    
+    Time-Based Filters:
+    - Optimal hours: 08:00-11:00 UTC, 13:00-16:00 UTC, 19:00-22:00 UTC
+    - Avoid: Server reset (23:55-00:05 UTC)
+    - Reduced confidence during off-peak hours
     """
+    
+    # Optimal trading hours (UTC) - these tend to have better price action
+    OPTIMAL_HOURS = [
+        (8, 11),   # Morning session
+        (13, 16),  # Afternoon session  
+        (19, 22),  # Evening session
+    ]
+    
+    # Hours to completely avoid
+    AVOID_HOURS = [
+        (23, 24),  # Pre-reset
+        (0, 1),    # Post-reset
+    ]
     
     def __init__(self):
         self.indicators = TechnicalIndicators(
@@ -91,6 +109,9 @@ class HybridAdaptiveStrategy:
         
         self.last_signal_time: Optional[datetime] = None
         self.min_signal_interval = 60  # Minimum seconds between signals
+        
+        # Time-based tracking
+        self.hourly_stats: Dict[int, Dict[str, int]] = {h: {'wins': 0, 'losses': 0} for h in range(24)}
     
     def _detect_market_mode(self, ind_m5: IndicatorValues, ind_m15: IndicatorValues) -> MarketMode:
         """Detect current market mode using ADX from M5 and M15."""
@@ -124,6 +145,44 @@ class HybridAdaptiveStrategy:
             return False, "Server reset period - trading paused"
         
         return True, "OK"
+    
+    def _get_time_confidence_bonus(self) -> tuple[int, str]:
+        """
+        Get confidence bonus/penalty based on current hour.
+        
+        Returns:
+            tuple of (confidence_adjustment, reason)
+        """
+        now = datetime.now(pytz.UTC)
+        current_hour = now.hour
+        
+        # Check if in avoid hours
+        for start, end in self.AVOID_HOURS:
+            if start <= current_hour < end:
+                return -100, f"Avoid hour ({current_hour}:00 UTC) - no trading"
+        
+        # Check if in optimal hours
+        for start, end in self.OPTIMAL_HOURS:
+            if start <= current_hour < end:
+                return 5, f"Optimal trading hour ({current_hour}:00 UTC)"
+        
+        # Off-peak hours - slight penalty
+        return -5, f"Off-peak hour ({current_hour}:00 UTC)"
+    
+    def record_trade_result(self, hour: int, won: bool):
+        """Record trade result for hourly statistics."""
+        if won:
+            self.hourly_stats[hour]['wins'] += 1
+        else:
+            self.hourly_stats[hour]['losses'] += 1
+    
+    def get_hourly_win_rate(self, hour: int) -> float:
+        """Get win rate for a specific hour."""
+        stats = self.hourly_stats[hour]
+        total = stats['wins'] + stats['losses']
+        if total == 0:
+            return 0.5  # Default 50% if no data
+        return stats['wins'] / total
     
     def analyze(
         self,
@@ -186,8 +245,24 @@ class HybridAdaptiveStrategy:
         logger.info(f"=== SIGNAL ANALYSIS ===")
         logger.info(f"MARKET MODE: {market_mode.value} (ADX={ind_m5.adx:.1f}, +DI={ind_m5.plus_di:.1f}, -DI={ind_m5.minus_di:.1f})")
         logger.info(f"M1: close={ind_m1.close:.2f}, RSI={ind_m1.rsi:.1f}, Stoch_K={ind_m1.stoch_k:.1f}")
-        logger.info(f"M5: close={ind_m5.close:.2f}, RSI={ind_m5.rsi:.1f}, EMA50={ind_m5.ema_50:.2f}")
+        logger.info(f"M5: close={ind_m5.close:.2f}, RSI={ind_m5.rsi:.1f}, EMA50={ind_m5.ema_50:.2f}, BB_Width={ind_m5.bb_width:.4f}, Squeeze={ind_m5.bb_squeeze}")
         logger.info(f"M15: close={ind_m15.close:.2f}, EMA200={ind_m15.ema_200:.2f}, trend_up={ind_m15.trend_up}, trend_down={ind_m15.trend_down}")
+        
+        # Check for Bollinger Band squeeze (low volatility) - avoid trading
+        if ind_m5.bb_squeeze:
+            logger.info("BB SQUEEZE detected - low volatility, avoiding trades")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=[f"BB Squeeze (low volatility) - waiting for breakout"],
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # Generate signals based on market mode
         if market_mode == MarketMode.TRENDING_UP:
@@ -217,12 +292,23 @@ class HybridAdaptiveStrategy:
         
         logger.info(f"RISE confidence: {rise_signal.confidence}, FALL confidence: {fall_signal.confidence}")
         
-        # Return the stronger signal (minimum 60% confidence required)
-        if rise_signal.confidence > fall_signal.confidence and rise_signal.confidence >= 60:
-            logger.info(f">>> SELECTED: RISE with {rise_signal.confidence}% confidence ({market_mode.value})")
+        # Apply time-based confidence adjustment
+        time_bonus, time_reason = self._get_time_confidence_bonus()
+        logger.info(f"Time filter: {time_reason} (adjustment: {time_bonus:+d})")
+        
+        # Adjust confidence based on time
+        rise_adjusted = rise_signal.confidence + time_bonus
+        fall_adjusted = fall_signal.confidence + time_bonus
+        
+        # Return the stronger signal (minimum 60% confidence required after time adjustment)
+        if rise_adjusted > fall_adjusted and rise_adjusted >= 60:
+            # Update confluence factors with time info
+            rise_signal.confluence_factors.append(time_reason)
+            logger.info(f">>> SELECTED: RISE with {rise_adjusted}% confidence ({market_mode.value})")
             return rise_signal
-        elif fall_signal.confidence > rise_signal.confidence and fall_signal.confidence >= 60:
-            logger.info(f">>> SELECTED: FALL with {fall_signal.confidence}% confidence ({market_mode.value})")
+        elif fall_adjusted > rise_adjusted and fall_adjusted >= 60:
+            fall_signal.confluence_factors.append(time_reason)
+            logger.info(f">>> SELECTED: FALL with {fall_adjusted}% confidence ({market_mode.value})")
             return fall_signal
         
         # No valid signal
@@ -298,23 +384,36 @@ class HybridAdaptiveStrategy:
             confidence += 15
             m15_confirmed = True
         
+        # ADX Slope - trend strength momentum
+        if ind_m5.adx_rising:
+            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.1f}) - trend strengthening")
+            confidence += 10
+        elif ind_m5.adx_falling:
+            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.1f}) - trend weakening")
+            confidence -= 10  # Penalty for weakening trend
+        
         # MACD momentum confirmation on M5
         if ind_m5.macd_bullish:
             confluence_factors.append(f"M5: MACD bullish momentum (histogram={ind_m5.macd_histogram:.4f})")
             confidence += 15
         
-        # M5: Look for pullback conditions
-        # Price pulled back to EMA50 or lower BB
-        pullback_to_ema = ind_m5.close <= ind_m5.ema_50 * 1.002  # Within 0.2% of EMA50
-        pullback_to_bb = ind_m5.close <= ind_m5.bb_lower * 1.01  # Near lower BB
+        # M5: Look for pullback conditions - MUST be near lower BB for RISE
+        # Use BB %B to check position: <0.25 means in lower 25% of bands
+        bb_percent = ind_m5.bb_percent
+        near_lower_bb = bb_percent <= 0.25  # Price in lower 25% of BB range
+        at_lower_bb = ind_m5.close <= ind_m5.bb_lower * 1.005  # Within 0.5% of lower BB
         
-        if pullback_to_ema or pullback_to_bb:
-            if pullback_to_ema:
-                confluence_factors.append(f"M5: Pullback to EMA50 ({ind_m5.ema_50:.2f})")
-            if pullback_to_bb:
-                confluence_factors.append(f"M5: Pullback to lower BB ({ind_m5.bb_lower:.2f})")
-            confidence += 25
+        if near_lower_bb or at_lower_bb:
+            if at_lower_bb:
+                confluence_factors.append(f"M5: At lower BB ({ind_m5.bb_lower:.2f})")
+                confidence += 30  # Strong signal at BB
+            else:
+                confluence_factors.append(f"M5: Near lower BB zone (BB%={bb_percent:.2f})")
+                confidence += 20
             m5_confirmed = True
+        else:
+            # Price not near lower BB - weak setup for RISE
+            confluence_factors.append(f"M5: Price not at lower BB (BB%={bb_percent:.2f}) - weak setup")
         
         # RSI in buy zone (40-55 in uptrend is good entry)
         if 35 <= ind_m5.rsi <= 55:
@@ -392,23 +491,36 @@ class HybridAdaptiveStrategy:
             confidence += 15
             m15_confirmed = True
         
+        # ADX Slope - trend strength momentum
+        if ind_m5.adx_rising:
+            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.1f}) - trend strengthening")
+            confidence += 10
+        elif ind_m5.adx_falling:
+            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.1f}) - trend weakening")
+            confidence -= 10  # Penalty for weakening trend
+        
         # MACD momentum confirmation on M5
         if ind_m5.macd_bearish:
             confluence_factors.append(f"M5: MACD bearish momentum (histogram={ind_m5.macd_histogram:.4f})")
             confidence += 15
         
-        # M5: Look for rally conditions
-        # Price rallied to EMA50 or upper BB
-        rally_to_ema = ind_m5.close >= ind_m5.ema_50 * 0.998  # Within 0.2% of EMA50
-        rally_to_bb = ind_m5.close >= ind_m5.bb_upper * 0.99  # Near upper BB
+        # M5: Look for rally conditions - MUST be near upper BB for FALL
+        # Use BB %B to check position: >0.8 means in upper 20% of bands
+        bb_percent = ind_m5.bb_percent
+        near_upper_bb = bb_percent >= 0.75  # Price in upper 25% of BB range
+        at_upper_bb = ind_m5.close >= ind_m5.bb_upper * 0.995  # Within 0.5% of upper BB
         
-        if rally_to_ema or rally_to_bb:
-            if rally_to_ema:
-                confluence_factors.append(f"M5: Rally to EMA50 ({ind_m5.ema_50:.2f})")
-            if rally_to_bb:
-                confluence_factors.append(f"M5: Rally to upper BB ({ind_m5.bb_upper:.2f})")
-            confidence += 25
+        if near_upper_bb or at_upper_bb:
+            if at_upper_bb:
+                confluence_factors.append(f"M5: At upper BB ({ind_m5.bb_upper:.2f})")
+                confidence += 30  # Strong signal at BB
+            else:
+                confluence_factors.append(f"M5: Near upper BB zone (BB%={bb_percent:.2f})")
+                confidence += 20
             m5_confirmed = True
+        else:
+            # Price not near upper BB - weak setup for FALL
+            confluence_factors.append(f"M5: Price not at upper BB (BB%={bb_percent:.2f}) - weak setup")
         
         # RSI in sell zone (45-65 in downtrend is good entry)
         if 45 <= ind_m5.rsi <= 65:
@@ -607,6 +719,8 @@ class HybridAdaptiveStrategy:
                 'bb_upper': round(ind_m1.bb_upper, 5),
                 'bb_middle': round(ind_m1.bb_middle, 5),
                 'bb_lower': round(ind_m1.bb_lower, 5),
+                'bb_width': round(ind_m1.bb_width, 4),
+                'bb_squeeze': bool(ind_m1.bb_squeeze),
                 'rsi': round(ind_m1.rsi, 2),
                 'stoch_k': round(ind_m1.stoch_k, 2),
                 'stoch_d': round(ind_m1.stoch_d, 2),
@@ -615,6 +729,8 @@ class HybridAdaptiveStrategy:
                 'adx': round(ind_m1.adx, 2),
                 'plus_di': round(ind_m1.plus_di, 2),
                 'minus_di': round(ind_m1.minus_di, 2),
+                'adx_slope': round(float(ind_m1.adx_slope), 2),
+                'adx_rising': bool(ind_m1.adx_rising),
                 'macd': round(ind_m1.macd, 5),
                 'macd_signal': round(ind_m1.macd_signal, 5),
                 'macd_histogram': round(ind_m1.macd_histogram, 5)
@@ -624,6 +740,8 @@ class HybridAdaptiveStrategy:
                 'bb_upper': round(ind_m5.bb_upper, 5),
                 'bb_middle': round(ind_m5.bb_middle, 5),
                 'bb_lower': round(ind_m5.bb_lower, 5),
+                'bb_width': round(ind_m5.bb_width, 4),
+                'bb_squeeze': bool(ind_m5.bb_squeeze),
                 'rsi': round(ind_m5.rsi, 2),
                 'stoch_k': round(ind_m5.stoch_k, 2),
                 'stoch_d': round(ind_m5.stoch_d, 2),
@@ -632,6 +750,8 @@ class HybridAdaptiveStrategy:
                 'adx': round(ind_m5.adx, 2),
                 'plus_di': round(ind_m5.plus_di, 2),
                 'minus_di': round(ind_m5.minus_di, 2),
+                'adx_slope': round(float(ind_m5.adx_slope), 2),
+                'adx_rising': bool(ind_m5.adx_rising),
                 'macd': round(ind_m5.macd, 5),
                 'macd_signal': round(ind_m5.macd_signal, 5),
                 'macd_histogram': round(ind_m5.macd_histogram, 5)
@@ -641,6 +761,8 @@ class HybridAdaptiveStrategy:
                 'bb_upper': round(ind_m15.bb_upper, 5),
                 'bb_middle': round(ind_m15.bb_middle, 5),
                 'bb_lower': round(ind_m15.bb_lower, 5),
+                'bb_width': round(ind_m15.bb_width, 4),
+                'bb_squeeze': bool(ind_m15.bb_squeeze),
                 'rsi': round(ind_m15.rsi, 2),
                 'stoch_k': round(ind_m15.stoch_k, 2),
                 'stoch_d': round(ind_m15.stoch_d, 2),
@@ -649,6 +771,8 @@ class HybridAdaptiveStrategy:
                 'adx': round(ind_m15.adx, 2),
                 'plus_di': round(ind_m15.plus_di, 2),
                 'minus_di': round(ind_m15.minus_di, 2),
+                'adx_slope': round(float(ind_m15.adx_slope), 2),
+                'adx_rising': bool(ind_m15.adx_rising),
                 'macd': round(ind_m15.macd, 5),
                 'macd_signal': round(ind_m15.macd_signal, 5),
                 'macd_histogram': round(ind_m15.macd_histogram, 5)

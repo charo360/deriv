@@ -66,6 +66,9 @@ async def broadcast_state(state: dict):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
+    global bot
+    # Reset bot state on startup to avoid stale state from previous runs
+    bot = None
     logger.info("Starting Deriv Trading Bot API...")
     yield
     logger.info("Shutting down...")

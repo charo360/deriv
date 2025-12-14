@@ -13,6 +13,7 @@ function App() {
   const {
     loading,
     error,
+    clearError,
     startBot,
     stopBot,
     enableTrading,
@@ -50,9 +51,17 @@ function App() {
       <main className="container mx-auto px-4 py-6">
         {/* Error Alert */}
         {error && (
-          <div className="mb-4 bg-deriv-red/20 border border-deriv-red rounded-lg p-4 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-deriv-red" />
-            <span className="text-deriv-red">{error}</span>
+          <div className="mb-4 bg-deriv-red/20 border border-deriv-red rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-deriv-red" />
+              <span className="text-deriv-red">{error}</span>
+            </div>
+            <button
+              onClick={clearError}
+              className="text-deriv-red hover:text-white text-sm px-2 py-1 rounded hover:bg-deriv-red/30"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 

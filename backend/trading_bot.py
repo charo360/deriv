@@ -291,6 +291,10 @@ class TradingBot:
         self.risk_manager.record_trade(trade)
         logger.info(f"Trade recorded: {trade.direction} {trade.result.value}, total trades: {len(self.risk_manager.all_trades)}")
         
+        # Record hourly statistics for time-based filtering
+        trade_hour = datetime.now(pytz.UTC).hour
+        self.strategy.record_trade_result(trade_hour, result.is_win)
+        
         # Record trade to CSV with full indicator values for analysis
         signal_data = None
         if signal_used:

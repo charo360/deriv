@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const apiBaseFromEnv =
   (import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE_URL;
@@ -8,6 +8,14 @@ const API_BASE = (apiBaseFromEnv || `http://${window.location.hostname}:8000`)
 export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Clear error after 5 seconds automatically
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const request = useCallback(async (
     endpoint: string,
@@ -66,9 +74,14 @@ export function useApi() {
     return request('/settings', 'PUT', settings);
   }, [request]);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   return {
     loading,
     error,
+    clearError,
     startBot,
     stopBot,
     enableTrading,

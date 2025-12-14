@@ -21,6 +21,8 @@ class IndicatorValues:
     bb_middle: float
     bb_lower: float
     bb_percent: float  # %B indicator
+    bb_width: float    # Band width (volatility measure)
+    bb_squeeze: bool   # True when bands are narrow (low volatility)
     
     # RSI
     rsi: float
@@ -37,6 +39,9 @@ class IndicatorValues:
     adx: float
     plus_di: float
     minus_di: float
+    adx_slope: float      # ADX change over last 3 periods (positive = strengthening)
+    adx_rising: bool      # True if ADX is rising (trend strengthening)
+    adx_falling: bool     # True if ADX is falling (trend weakening)
     
     # MACD - Momentum
     macd: float
@@ -121,6 +126,12 @@ class TechnicalIndicators:
         bb_middle = bb.bollinger_mavg().iloc[-1]
         bb_lower = bb.bollinger_lband().iloc[-1]
         bb_percent = bb.bollinger_pband().iloc[-1]
+        bb_width = bb.bollinger_wband().iloc[-1]  # Band width as percentage of middle band
+        
+        # Calculate average BB width over last 20 periods to detect squeeze
+        bb_width_series = bb.bollinger_wband()
+        avg_bb_width = bb_width_series.iloc[-20:].mean()
+        bb_squeeze = bb_width < (avg_bb_width * 0.75)  # Squeeze when width is 25% below average
         
         # RSI
         rsi_indicator = ta.momentum.RSIIndicator(
@@ -161,9 +172,15 @@ class TechnicalIndicators:
             close=df['close'],
             window=14
         )
-        adx = adx_indicator.adx().iloc[-1]
+        adx_series = adx_indicator.adx()
+        adx = adx_series.iloc[-1]
         plus_di = adx_indicator.adx_pos().iloc[-1]
         minus_di = adx_indicator.adx_neg().iloc[-1]
+        
+        # ADX Slope - measure trend strength change over last 3 periods
+        adx_slope = adx_series.iloc[-1] - adx_series.iloc[-4] if len(adx_series) >= 4 else 0
+        adx_rising = adx_slope > 1.0   # ADX increased by more than 1 point
+        adx_falling = adx_slope < -1.0  # ADX decreased by more than 1 point
         
         # MACD - Momentum confirmation
         macd_indicator = ta.trend.MACD(
@@ -209,6 +226,8 @@ class TechnicalIndicators:
             bb_middle=bb_middle,
             bb_lower=bb_lower,
             bb_percent=bb_percent,
+            bb_width=bb_width,
+            bb_squeeze=bb_squeeze,
             rsi=rsi,
             stoch_k=stoch_k,
             stoch_d=stoch_d,
@@ -217,6 +236,9 @@ class TechnicalIndicators:
             adx=adx,
             plus_di=plus_di,
             minus_di=minus_di,
+            adx_slope=adx_slope,
+            adx_rising=adx_rising,
+            adx_falling=adx_falling,
             macd=macd,
             macd_signal=macd_signal,
             macd_histogram=macd_histogram,
