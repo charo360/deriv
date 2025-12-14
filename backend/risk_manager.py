@@ -242,7 +242,8 @@ class RiskManager:
         gross_wins = sum(t.profit for t in self.all_trades if t.profit > 0)
         gross_losses = abs(sum(t.profit for t in self.all_trades if t.profit < 0))
         
-        profit_factor = gross_wins / gross_losses if gross_losses > 0 else float('inf')
+        # Avoid Infinity in JSON - use 0 when no losses yet
+        profit_factor = gross_wins / gross_losses if gross_losses > 0 else 0.0
         expectancy = total_profit / total_trades if total_trades > 0 else 0
         
         # Calculate max drawdown
