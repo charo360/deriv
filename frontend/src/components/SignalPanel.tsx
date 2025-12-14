@@ -50,19 +50,57 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             </div>
           </div>
           
-          {hasSignal && (
-            <div className="text-right">
-              <p className="text-sm text-gray-400">Confidence</p>
-              <p className={`text-2xl font-bold ${
-                signal.confidence >= 80 ? 'text-deriv-green' :
-                signal.confidence >= 60 ? 'text-yellow-500' : 'text-gray-400'
-              }`}>
-                {signal.confidence}%
-              </p>
-            </div>
-          )}
+          <div className="text-right">
+            <p className="text-sm text-gray-400">Confidence</p>
+            <p className={`text-2xl font-bold ${
+              signal.confidence >= 80 ? 'text-deriv-green' :
+              signal.confidence >= 60 ? 'text-yellow-500' : 'text-gray-400'
+            }`}>
+              {signal.confidence}%
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* RSI Display - Always Visible */}
+      {signal.indicators && (
+        <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">M5 RSI</p>
+              <p className={`text-3xl font-bold ${
+                signal.indicators.m5.rsi < 35 ? 'text-deriv-green' :
+                signal.indicators.m5.rsi > 65 ? 'text-deriv-red' : 'text-yellow-500'
+              }`}>
+                {signal.indicators.m5.rsi.toFixed(1)}
+              </p>
+            </div>
+            <div className="text-right text-sm">
+              {signal.indicators.m5.rsi < 35 ? (
+                <div className="text-deriv-green">
+                  <p className="font-semibold">OVERSOLD ✓</p>
+                  <p className="text-xs opacity-75">{(35 - signal.indicators.m5.rsi).toFixed(1)} below threshold</p>
+                </div>
+              ) : signal.indicators.m5.rsi > 65 ? (
+                <div className="text-deriv-red">
+                  <p className="font-semibold">OVERBOUGHT ✓</p>
+                  <p className="text-xs opacity-75">{(signal.indicators.m5.rsi - 65).toFixed(1)} above threshold</p>
+                </div>
+              ) : (
+                <div className="text-gray-400">
+                  <p className="font-semibold">NEUTRAL</p>
+                  <p className="text-xs">
+                    {signal.indicators.m5.rsi < 50 
+                      ? `${(35 - signal.indicators.m5.rsi).toFixed(1)} to oversold`
+                      : `${(signal.indicators.m5.rsi - 65).toFixed(1)} to overbought`
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pending Contract */}
       {pendingContract && (
@@ -121,8 +159,8 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             <div>
               <span className="text-gray-400">RSI:</span>
               <span className={`ml-2 font-medium ${
-                signal.indicators.m5.rsi < 30 ? 'text-deriv-green' :
-                signal.indicators.m5.rsi > 70 ? 'text-deriv-red' : 'text-gray-300'
+                signal.indicators.m5.rsi < 35 ? 'text-deriv-green' :
+                signal.indicators.m5.rsi > 65 ? 'text-deriv-red' : 'text-gray-300'
               }`}>
                 {signal.indicators.m5.rsi.toFixed(1)}
               </span>
