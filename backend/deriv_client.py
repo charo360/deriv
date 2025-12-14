@@ -266,15 +266,30 @@ class DerivClient:
             
             # Convert API candle format to our OHLC format
             candles = []
-            for i in range(len(raw_candles.get("open", []))):
-                candle = {
-                    "epoch": raw_candles["epoch"][i],
-                    "open": round(float(raw_candles["open"][i]), 4),
-                    "high": round(float(raw_candles["high"][i]), 4),
-                    "low": round(float(raw_candles["low"][i]), 4),
-                    "close": round(float(raw_candles["close"][i]), 4)
-                }
-                candles.append(candle)
+            
+            # Check if candles are in dict format (arrays) or list format (already parsed)
+            if isinstance(raw_candles, dict) and "open" in raw_candles:
+                # Dict format: {"open": [...], "high": [...], "low": [...], "close": [...], "epoch": [...]}
+                for i in range(len(raw_candles["open"])):
+                    candle = {
+                        "epoch": raw_candles["epoch"][i],
+                        "open": round(float(raw_candles["open"][i]), 4),
+                        "high": round(float(raw_candles["high"][i]), 4),
+                        "low": round(float(raw_candles["low"][i]), 4),
+                        "close": round(float(raw_candles["close"][i]), 4)
+                    }
+                    candles.append(candle)
+            elif isinstance(raw_candles, list):
+                # List format: already parsed candles
+                for c in raw_candles:
+                    candle = {
+                        "epoch": c.get("epoch"),
+                        "open": round(float(c.get("open", 0)), 4),
+                        "high": round(float(c.get("high", 0)), 4),
+                        "low": round(float(c.get("low", 0)), 4),
+                        "close": round(float(c.get("close", 0)), 4)
+                    }
+                    candles.append(candle)
             
             # Store candles by timeframe
             if granularity == 60:
