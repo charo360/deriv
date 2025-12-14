@@ -126,10 +126,9 @@ class RiskManager:
     
     def calculate_stake(self) -> float:
         """
-        Calculate next stake using capped Martingale.
+        Calculate next stake using fixed position sizing.
         
-        Martingale sequence: base -> base*2.2 -> base*5 -> reset
-        This recovers losses while capping risk.
+        No Martingale - always use the same base stake to avoid compounding losses.
         """
         # Check if new day
         if date.today() != self.current_date:
@@ -144,19 +143,11 @@ class RiskManager:
         elif balance_ratio < 0.5:
             base_stake = self.initial_stake * 0.5
         
-        # Martingale multipliers (designed to recover previous losses + profit)
-        martingale_multipliers = [1.0, 2.2, 5.0]
-        
-        if self.current_martingale_step >= self.max_martingale_steps:
-            # Reset after max steps
-            self.current_martingale_step = 0
-            return base_stake
-        
-        multiplier = martingale_multipliers[min(self.current_martingale_step, len(martingale_multipliers) - 1)]
-        stake = base_stake * multiplier
+        # Always use base stake - no Martingale
+        stake = base_stake
         
         # Cap stake at risk percent of balance
-        max_stake = self.current_balance * (self.risk_percent / 100) * 3
+        max_stake = self.current_balance * (self.risk_percent / 100)
         stake = min(stake, max_stake)
         
         # Minimum stake
@@ -208,12 +199,12 @@ class RiskManager:
         if trade.result == TradeResult.WIN:
             self.total_wins += 1
             self.consecutive_losses = 0
-            self.current_martingale_step = 0  # Reset on win
+            self.current_martingale_step = 0  # Reset counter
         elif trade.result == TradeResult.LOSS:
             self.total_losses += 1
             self.consecutive_losses += 1
-            self.current_martingale_step += 1  # Advance Martingale
-        # TIE doesn't affect Martingale
+            self.current_martingale_step = 0  # No Martingale - keep at 0
+        # TIE doesn't affect counters
     
     def get_statistics(self) -> dict:
         """Get current trading statistics."""
