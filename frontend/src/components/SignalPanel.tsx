@@ -45,7 +45,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
                 {isRise ? 'RISE' : isFall ? 'FALL' : 'NO SIGNAL'}
               </p>
               <p className="text-sm text-gray-400">
-                Price: {signal.price.toFixed(5)}
+                Price: {signal.price.toFixed(4)}
               </p>
             </div>
           </div>
