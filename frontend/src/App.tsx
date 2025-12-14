@@ -20,6 +20,7 @@ function App() {
     disableTrading,
     manualTrade,
     updateSettings,
+    clearHistory,
   } = useApi();
 
   // Default values when not connected
@@ -119,7 +120,10 @@ function App() {
 
           {/* Right Column - Trade History */}
           <div>
-            <TradeHistory trades={state?.trade_history ?? []} />
+            <TradeHistory 
+              trades={state?.trade_history ?? []} 
+              onClearHistory={clearHistory}
+            />
           </div>
         </div>
 

@@ -279,22 +279,32 @@ class RiskManager:
     
     def get_trade_history(self, limit: int = 50) -> List[dict]:
         """Get recent trade history."""
-        trades = self.all_trades[-limit:]
+        trades = self.all_trades[-limit:] if len(self.all_trades) > limit else self.all_trades
         return [
             {
-                'id': t.id,
-                'timestamp': t.timestamp.isoformat(),
-                'symbol': t.symbol,
-                'direction': t.direction,
-                'stake': t.stake,
-                'payout': t.payout,
-                'result': t.result.value,
-                'profit': round(t.profit, 2),
-                'entry_price': t.entry_price,
-                'exit_price': t.exit_price
+                'id': trade.id,
+                'timestamp': trade.timestamp.isoformat(),
+                'symbol': trade.symbol,
+                'direction': trade.direction,
+                'stake': trade.stake,
+                'payout': trade.payout,
+                'result': trade.result.value,
+                'profit': trade.profit,
+                'entry_price': trade.entry_price,
+                'exit_price': trade.exit_price
             }
-            for t in reversed(trades)
+            for trade in trades
         ]
+    
+    def clear_history(self):
+        """Clear all trade history and reset statistics."""
+        self.all_trades.clear()
+        self.daily_trades.clear()
+        self.consecutive_losses = 0
+        self.current_martingale_step = 0
+        self.total_wins = 0
+        self.total_losses = 0
+        logger.info("Trade history cleared")
     
     def reset(self, new_balance: Optional[float] = None):
         """Reset the risk manager state."""

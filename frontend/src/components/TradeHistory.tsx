@@ -1,11 +1,14 @@
-import { TrendingUp, TrendingDown, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Trade } from '../types';
 
 interface TradeHistoryProps {
   trades: Trade[];
+  onClearHistory?: () => void;
 }
 
-export function TradeHistory({ trades }: TradeHistoryProps) {
+export function TradeHistory({ trades, onClearHistory }: TradeHistoryProps) {
+  const [showConfirm, setShowConfirm] = useState(false);
   const downloadCSV = () => {
     if (trades.length === 0) return;
     
@@ -41,6 +44,13 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
     document.body.removeChild(link);
   };
 
+  const handleClearHistory = () => {
+    if (onClearHistory) {
+      onClearHistory();
+      setShowConfirm(false);
+    }
+  };
+
   if (trades.length === 0) {
     return (
       <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
@@ -56,14 +66,48 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
     <div className="bg-deriv-gray rounded-lg p-4 border border-deriv-light">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Trade History</h2>
-        <button
-          onClick={downloadCSV}
-          className="flex items-center gap-2 px-3 py-1.5 bg-deriv-green/20 text-deriv-green rounded hover:bg-deriv-green/30 transition-colors text-sm"
-        >
-          <Download className="w-4 h-4" />
-          Download CSV
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={downloadCSV}
+            className="flex items-center gap-2 px-3 py-1.5 bg-deriv-green/20 text-deriv-green rounded hover:bg-deriv-green/30 transition-colors text-sm"
+          >
+            <Download className="w-4 h-4" />
+            Download CSV
+          </button>
+          <button
+            onClick={() => setShowConfirm(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-deriv-red/20 text-deriv-red rounded hover:bg-deriv-red/30 transition-colors text-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear History
+          </button>
+        </div>
       </div>
+      
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-deriv-gray border border-deriv-light rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-3">Clear Trade History?</h3>
+            <p className="text-gray-400 mb-6">
+              This will permanently delete all trade history and reset statistics. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 bg-deriv-light text-white rounded hover:bg-deriv-light/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearHistory}
+                className="px-4 py-2 bg-deriv-red text-white rounded hover:bg-deriv-red/80 transition-colors"
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

@@ -207,6 +207,16 @@ async def get_trade_history(limit: int = 50):
     return {"trades": bot.risk_manager.get_trade_history(limit)}
 
 
+@app.delete("/api/history")
+async def clear_trade_history():
+    """Clear all trade history."""
+    if not bot:
+        raise HTTPException(status_code=400, detail="Bot not initialized")
+    
+    bot.risk_manager.clear_history()
+    return {"success": True, "message": "Trade history cleared"}
+
+
 @app.get("/api/statistics")
 async def get_statistics():
     """Get trading statistics."""

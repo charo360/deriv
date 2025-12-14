@@ -74,6 +74,10 @@ export function useApi() {
     return request('/settings', 'PUT', settings);
   }, [request]);
 
+  const clearHistory = useCallback(() => {
+    return request('/history', 'DELETE');
+  }, [request]);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -88,5 +92,6 @@ export function useApi() {
     disableTrading,
     manualTrade,
     updateSettings,
+    clearHistory,
   };
 }
