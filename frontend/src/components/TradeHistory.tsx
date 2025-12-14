@@ -10,7 +10,7 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
     if (trades.length === 0) return;
     
     // CSV headers
-    const headers = ['Time', 'Direction', 'Stake', 'Profit', 'Result', 'Entry Price', 'Exit Price', 'Confidence'];
+    const headers = ['Time', 'Direction', 'Stake', 'Profit', 'Result', 'Entry Price', 'Exit Price'];
     
     // CSV rows
     const rows = trades.map(trade => [
@@ -20,8 +20,7 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
       trade.profit.toFixed(2),
       trade.result.toUpperCase(),
       trade.entry_price?.toFixed(5) || '',
-      trade.exit_price?.toFixed(5) || '',
-      trade.confidence?.toFixed(1) || ''
+      trade.exit_price?.toFixed(5) || ''
     ]);
     
     // Combine headers and rows
