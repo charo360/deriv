@@ -469,52 +469,11 @@ class DerivClient:
         }
     
     def get_candles(self, timeframe: str) -> List[dict]:
-        """Get candles for a specific timeframe, including current incomplete candle."""
-        candles = []
-        granularity = 0
-        
+        """Get candles for a specific timeframe (completed candles only)."""
         if timeframe == "m1":
-            candles = self.candles_m1.copy()
-            granularity = 60
+            return self.candles_m1.copy()
         elif timeframe == "m5":
-            candles = self.candles_m5.copy()
-            granularity = 300
+            return self.candles_m5.copy()
         elif timeframe == "m15":
-            candles = self.candles_m15.copy()
-            granularity = 900
-        else:
-            return []
-        
-        # Add current incomplete candle if we have tick data
-        if candles and self.current_tick_price > 0 and self.current_tick_epoch > 0:
-            last_candle = candles[-1]
-            last_candle_epoch = last_candle['epoch']
-            
-            # Calculate current candle's epoch (start of current period)
-            current_candle_epoch = (self.current_tick_epoch // granularity) * granularity
-            
-            # If current tick is in a new candle period, create incomplete candle
-            if current_candle_epoch > last_candle_epoch:
-                incomplete_candle = {
-                    'epoch': current_candle_epoch,
-                    'open': round(last_candle['close'], 4),
-                    'high': round(max(last_candle['close'], self.current_tick_price), 4),
-                    'low': round(min(last_candle['close'], self.current_tick_price), 4),
-                    'close': round(self.current_tick_price, 4)
-                }
-                candles.append(incomplete_candle)
-                logger.debug(f"{timeframe.upper()}: Added NEW incomplete candle - O:{incomplete_candle['open']:.2f} H:{incomplete_candle['high']:.2f} L:{incomplete_candle['low']:.2f} C:{incomplete_candle['close']:.2f}")
-            # If current tick is in the same period as last candle, update it
-            elif current_candle_epoch == last_candle_epoch:
-                # Update the last candle with current tick
-                updated_candle = {
-                    'epoch': last_candle['epoch'],
-                    'open': round(last_candle['open'], 4),
-                    'high': round(max(last_candle['high'], self.current_tick_price), 4),
-                    'low': round(min(last_candle['low'], self.current_tick_price), 4),
-                    'close': round(self.current_tick_price, 4)
-                }
-                candles[-1] = updated_candle
-                logger.debug(f"{timeframe.upper()}: Updated LIVE candle - O:{updated_candle['open']:.2f} H:{updated_candle['high']:.2f} L:{updated_candle['low']:.2f} C:{updated_candle['close']:.2f}")
-        
-        return candles
+            return self.candles_m15.copy()
+        return []
