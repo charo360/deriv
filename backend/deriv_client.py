@@ -262,15 +262,32 @@ class DerivClient:
         })
         
         if "candles" in response:
-            candles = response["candles"]
+            raw_candles = response["candles"]
+            
+            # Convert API candle format to our OHLC format
+            candles = []
+            for i in range(len(raw_candles.get("open", []))):
+                candle = {
+                    "epoch": raw_candles["epoch"][i],
+                    "open": round(float(raw_candles["open"][i]), 4),
+                    "high": round(float(raw_candles["high"][i]), 4),
+                    "low": round(float(raw_candles["low"][i]), 4),
+                    "close": round(float(raw_candles["close"][i]), 4)
+                }
+                candles.append(candle)
             
             # Store candles by timeframe
             if granularity == 60:
                 self.candles_m1 = candles
+                logger.info(f"Stored {len(candles)} M1 candles (granularity={granularity}s)")
             elif granularity == 300:
                 self.candles_m5 = candles
+                logger.info(f"Stored {len(candles)} M5 candles (granularity={granularity}s)")
             elif granularity == 900:
                 self.candles_m15 = candles
+                logger.info(f"Stored {len(candles)} M15 candles (granularity={granularity}s)")
+            else:
+                logger.warning(f"Unknown granularity: {granularity}s")
             
             logger.info(f"Received {len(candles)} candles for {symbol} ({granularity}s)")
         
@@ -308,10 +325,15 @@ class DerivClient:
         # Update appropriate candle list
         if granularity == 60:
             self._update_candle_list(self.candles_m1, candle)
+            logger.debug(f"Updated M1 candle: epoch={candle['epoch']}, close={candle['close']}")
         elif granularity == 300:
             self._update_candle_list(self.candles_m5, candle)
+            logger.debug(f"Updated M5 candle: epoch={candle['epoch']}, close={candle['close']}")
         elif granularity == 900:
             self._update_candle_list(self.candles_m15, candle)
+            logger.debug(f"Updated M15 candle: epoch={candle['epoch']}, close={candle['close']}")
+        else:
+            logger.warning(f"Unknown granularity in candle update: {granularity}s")
         
         if self.on_candle:
             await self.on_candle({
