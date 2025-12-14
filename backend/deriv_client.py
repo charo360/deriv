@@ -503,15 +503,18 @@ class DerivClient:
                     'close': self.current_tick_price
                 }
                 candles.append(incomplete_candle)
+                logger.debug(f"{timeframe.upper()}: Added NEW incomplete candle - O:{incomplete_candle['open']:.2f} H:{incomplete_candle['high']:.2f} L:{incomplete_candle['low']:.2f} C:{incomplete_candle['close']:.2f}")
             # If current tick is in the same period as last candle, update it
             elif current_candle_epoch == last_candle_epoch:
                 # Update the last candle with current tick
-                candles[-1] = {
+                updated_candle = {
                     'epoch': last_candle['epoch'],
                     'open': last_candle['open'],
                     'high': max(last_candle['high'], self.current_tick_price),
                     'low': min(last_candle['low'], self.current_tick_price),
                     'close': self.current_tick_price
                 }
+                candles[-1] = updated_candle
+                logger.debug(f"{timeframe.upper()}: Updated LIVE candle - O:{updated_candle['open']:.2f} H:{updated_candle['high']:.2f} L:{updated_candle['low']:.2f} C:{updated_candle['close']:.2f}")
         
         return candles

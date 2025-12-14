@@ -130,6 +130,8 @@ class TechnicalIndicators:
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
         
+        logger.debug(f"RSI Details - AvgGain: {avg_gain:.4f}, AvgLoss: {avg_loss:.4f}, RS: {rs:.4f}, RSI: {rsi:.2f}")
+        
         return rsi
     
     def calculate(self, candles: List[dict]) -> Optional[IndicatorValues]:
@@ -171,6 +173,10 @@ class TechnicalIndicators:
         
         # RSI - Using Wilder's smoothing method (custom implementation)
         rsi = self._calculate_wilder_rsi(df['close'], self.rsi_period)
+        
+        # DEBUG: Log last 5 close prices used for RSI calculation
+        last_5_closes = df['close'].tail(5).tolist()
+        logger.info(f"RSI Calculation - Last 5 closes: {[f'{c:.2f}' for c in last_5_closes]}, RSI: {rsi:.2f}")
         
         # Compare with ta library for debugging
         rsi_indicator = ta.momentum.RSIIndicator(
