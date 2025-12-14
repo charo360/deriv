@@ -377,9 +377,9 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # STRICT: Only trade RISE when RSI is oversold (< 35)
-        if ind_m5.rsi >= 35:
-            confluence_factors.append(f"BLOCKED: RSI not oversold ({ind_m5.rsi:.1f}) - need RSI < 35 for RISE")
+        # STRICT: Only trade RISE when M1 RSI is oversold (< 35)
+        if ind_m1.rsi >= 35:
+            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.1f}) - need RSI < 35 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -438,10 +438,10 @@ class HybridAdaptiveStrategy:
         confidence += 30
         m5_confirmed = True
         
-        # RSI oversold confirmation (< 30)
-        confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        # M1 RSI oversold confirmation (< 35)
+        confluence_factors.append(f"M1: RSI oversold ({ind_m1.rsi:.1f}) - extreme reversal zone")
         confidence += 30
-        m5_confirmed = True
+        m1_confirmed = True
         
         # M1: Entry trigger
         # Stochastic turning up
@@ -491,9 +491,9 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # STRICT: Only trade FALL when RSI is overbought (> 65)
-        if ind_m5.rsi <= 65:
-            confluence_factors.append(f"BLOCKED: RSI not overbought ({ind_m5.rsi:.1f}) - need RSI > 65 for FALL")
+        # STRICT: Only trade FALL when M1 RSI is overbought (> 65)
+        if ind_m1.rsi <= 65:
+            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.1f}) - need RSI > 65 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -552,10 +552,10 @@ class HybridAdaptiveStrategy:
         confidence += 30
         m5_confirmed = True
         
-        # RSI overbought confirmation (> 70)
-        confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        # M1 RSI overbought confirmation (> 65)
+        confluence_factors.append(f"M1: RSI overbought ({ind_m1.rsi:.1f}) - extreme reversal zone")
         confidence += 30
-        m5_confirmed = True
+        m1_confirmed = True
         
         # M1: Entry trigger
         # Stochastic turning down
@@ -617,9 +617,9 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bullish")
             confidence += 10
         
-        # STRICT: Only trade RISE when RSI is oversold (< 35)
-        if ind_m5.rsi >= 35:
-            confluence_factors.append(f"BLOCKED: RSI not oversold ({ind_m5.rsi:.1f}) - need RSI < 35 for RISE")
+        # STRICT: Only trade RISE when M1 RSI is oversold (< 35)
+        if ind_m1.rsi >= 35:
+            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.1f}) - need RSI < 35 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -719,9 +719,9 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bearish")
             confidence += 10
         
-        # STRICT: Only trade FALL when RSI is overbought (> 65)
-        if ind_m5.rsi <= 65:
-            confluence_factors.append(f"BLOCKED: RSI not overbought ({ind_m5.rsi:.1f}) - need RSI > 65 for FALL")
+        # STRICT: Only trade FALL when M1 RSI is overbought (> 65)
+        if ind_m1.rsi <= 65:
+            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.1f}) - need RSI > 65 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
