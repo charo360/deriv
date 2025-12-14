@@ -328,11 +328,16 @@ class DerivClient:
         """Handle incoming candle update."""
         ohlc = data.get("ohlc", {})
         granularity = int(ohlc.get("granularity", 60))
+        raw_epoch = ohlc.get("epoch")
         
-        logger.info(f"Received candle update: granularity={granularity}s, epoch={ohlc.get('epoch')}, close={ohlc.get('close')}")
+        # Normalize epoch to candle start time (floor to granularity)
+        # Deriv API sends current tick time, we need candle open time
+        normalized_epoch = (raw_epoch // granularity) * granularity
+        
+        logger.info(f"Received candle update: granularity={granularity}s, raw_epoch={raw_epoch}, normalized_epoch={normalized_epoch}, close={ohlc.get('close')}")
         
         candle = {
-            "epoch": ohlc.get("epoch"),
+            "epoch": normalized_epoch,
             "open": round(float(ohlc.get("open", 0)), 4),
             "high": round(float(ohlc.get("high", 0)), 4),
             "low": round(float(ohlc.get("low", 0)), 4),
