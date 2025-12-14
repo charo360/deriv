@@ -5,6 +5,9 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Optional, List
 import ta
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -96,6 +99,39 @@ class TechnicalIndicators:
         self.stochastic_overbought = stochastic_overbought
         self.ema_period = ema_period
     
+    def _calculate_wilder_rsi(self, close_prices: pd.Series, period: int = 14) -> float:
+        """
+        Calculate RSI using Wilder's smoothing method (exact implementation).
+        This matches the original RSI formula from Wilder's 1978 book.
+        """
+        # Calculate price changes
+        delta = close_prices.diff()
+        
+        # Separate gains and losses
+        gains = delta.copy()
+        losses = delta.copy()
+        gains[gains < 0] = 0
+        losses[losses > 0] = 0
+        losses = abs(losses)
+        
+        # First average is simple moving average
+        avg_gain = gains.iloc[:period].mean()
+        avg_loss = losses.iloc[:period].mean()
+        
+        # Subsequent values use Wilder's smoothing: (previous_avg * (period-1) + current) / period
+        for i in range(period, len(gains)):
+            avg_gain = (avg_gain * (period - 1) + gains.iloc[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses.iloc[i]) / period
+        
+        # Calculate RS and RSI
+        if avg_loss == 0:
+            return 100.0
+        
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        
+        return rsi
+    
     def calculate(self, candles: List[dict]) -> Optional[IndicatorValues]:
         """
         Calculate all indicators from OHLC candle data.
@@ -133,12 +169,18 @@ class TechnicalIndicators:
         avg_bb_width = bb_width_series.iloc[-20:].mean()
         bb_squeeze = bb_width < (avg_bb_width * 0.75)  # Squeeze when width is 25% below average
         
-        # RSI
+        # RSI - Using Wilder's smoothing method (custom implementation)
+        rsi = self._calculate_wilder_rsi(df['close'], self.rsi_period)
+        
+        # Compare with ta library for debugging
         rsi_indicator = ta.momentum.RSIIndicator(
             close=df['close'],
             window=self.rsi_period
         )
-        rsi = rsi_indicator.rsi().iloc[-1]
+        rsi_ta = rsi_indicator.rsi().iloc[-1]
+        
+        if abs(rsi - rsi_ta) > 0.1:
+            logger.warning(f"RSI mismatch: Custom={rsi:.2f}, TA Library={rsi_ta:.2f}")
         
         # Stochastic Oscillator
         stoch = ta.momentum.StochasticOscillator(
