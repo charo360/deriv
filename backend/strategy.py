@@ -377,11 +377,21 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # Check for RSI reversal from oversold - key signal for RISE
-        rsi_reversing_up = ind_m1.rsi > ind_m5.rsi and ind_m5.rsi < 50
-        if rsi_reversing_up:
-            confluence_factors.append(f"M1: RSI reversing up (M1={ind_m1.rsi:.1f} > M5={ind_m5.rsi:.1f})")
-            confidence += 15
+        # STRICT: Only trade RISE when RSI is oversold (< 30)
+        if ind_m5.rsi >= 30:
+            confluence_factors.append(f"BLOCKED: RSI not oversold ({ind_m5.rsi:.1f}) - need RSI < 30 for RISE")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # M15: Confirm uptrend
         if ind_m15.trend_up:
@@ -420,15 +430,10 @@ class HybridAdaptiveStrategy:
             # Price not near lower BB - weak setup for RISE
             confluence_factors.append(f"M5: Price not at lower BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI oversold or turning up from low levels
-        if ind_m5.rsi < 40:
-            confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - reversal zone")
-            confidence += 25
-            m5_confirmed = True
-        elif 40 <= ind_m5.rsi <= 50 and rsi_reversing_up:
-            confluence_factors.append(f"M5: RSI turning up from pullback ({ind_m5.rsi:.1f})")
-            confidence += 20
-            m5_confirmed = True
+        # RSI oversold confirmation (< 30)
+        confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        confidence += 30
+        m5_confirmed = True
         
         # M1: Entry trigger
         # Stochastic turning up
@@ -478,11 +483,21 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # Check for RSI reversal from overbought - key signal for FALL
-        rsi_reversing_down = ind_m1.rsi < ind_m5.rsi and ind_m5.rsi > 50
-        if rsi_reversing_down:
-            confluence_factors.append(f"M1: RSI reversing down (M1={ind_m1.rsi:.1f} < M5={ind_m5.rsi:.1f})")
-            confidence += 15
+        # STRICT: Only trade FALL when RSI is overbought (> 70)
+        if ind_m5.rsi <= 70:
+            confluence_factors.append(f"BLOCKED: RSI not overbought ({ind_m5.rsi:.1f}) - need RSI > 70 for FALL")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # M15: Confirm downtrend
         if ind_m15.trend_down:
@@ -521,15 +536,10 @@ class HybridAdaptiveStrategy:
             # Price not near upper BB - weak setup for FALL
             confluence_factors.append(f"M5: Price not at upper BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI overbought or turning down from high levels
-        if ind_m5.rsi > 60:
-            confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - reversal zone")
-            confidence += 25
-            m5_confirmed = True
-        elif 50 <= ind_m5.rsi <= 60 and rsi_reversing_down:
-            confluence_factors.append(f"M5: RSI turning down from rally ({ind_m5.rsi:.1f})")
-            confidence += 20
-            m5_confirmed = True
+        # RSI overbought confirmation (> 70)
+        confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        confidence += 30
+        m5_confirmed = True
         
         # M1: Entry trigger
         # Stochastic turning down
@@ -591,22 +601,30 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bullish")
             confidence += 10
         
-        # M5: Check for reversal signals - price extreme OR RSI turning
-        rsi_reversing_up = ind_m1.rsi > ind_m5.rsi
+        # STRICT: Only trade RISE when RSI is oversold (< 30)
+        if ind_m5.rsi >= 30:
+            confluence_factors.append(f"BLOCKED: RSI not oversold ({ind_m5.rsi:.1f}) - need RSI < 30 for RISE")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         if ind_m5.price_at_lower_bb:
             confluence_factors.append("M5: Price at lower Bollinger Band")
             confidence += 30
             m5_confirmed = True
         
-        if ind_m5.rsi < 35:
-            confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - reversal zone")
-            confidence += 25
-            m5_confirmed = True
-        elif ind_m5.rsi < 45 and rsi_reversing_up:
-            confluence_factors.append(f"M5: RSI turning up ({ind_m5.rsi:.1f})")
-            confidence += 20
-            m5_confirmed = True
+        confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        confidence += 30
+        m5_confirmed = True
         
         if divergence.get('bullish_divergence'):
             confluence_factors.append("M5: Bullish RSI divergence")
@@ -670,22 +688,30 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bearish")
             confidence += 10
         
-        # M5: Check for reversal signals - price extreme OR RSI turning
-        rsi_reversing_down = ind_m1.rsi < ind_m5.rsi
+        # STRICT: Only trade FALL when RSI is overbought (> 70)
+        if ind_m5.rsi <= 70:
+            confluence_factors.append(f"BLOCKED: RSI not overbought ({ind_m5.rsi:.1f}) - need RSI > 70 for FALL")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         if ind_m5.price_at_upper_bb:
             confluence_factors.append("M5: Price at upper Bollinger Band")
             confidence += 30
             m5_confirmed = True
         
-        if ind_m5.rsi > 65:
-            confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - reversal zone")
-            confidence += 25
-            m5_confirmed = True
-        elif ind_m5.rsi > 55 and rsi_reversing_down:
-            confluence_factors.append(f"M5: RSI turning down ({ind_m5.rsi:.1f})")
-            confidence += 20
-            m5_confirmed = True
+        confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - extreme reversal zone")
+        confidence += 30
+        m5_confirmed = True
         
         if divergence.get('bearish_divergence'):
             confluence_factors.append("M5: Bearish RSI divergence")
