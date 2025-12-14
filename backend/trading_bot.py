@@ -160,6 +160,15 @@ class TradingBot:
         if not all([candles_m1, candles_m5, candles_m15]):
             return
         
+        # DEBUG: Log last 5 M1 candles to verify data freshness
+        if candles_m1:
+            logger.info(f"M1 Candles count: {len(candles_m1)}")
+            logger.info(f"Last 5 M1 candles:")
+            for candle in candles_m1[-5:]:
+                from datetime import datetime as dt
+                candle_time = dt.fromtimestamp(candle['epoch'])
+                logger.info(f"  Time: {candle_time}, Close: {candle['close']}, High: {candle['high']}, Low: {candle['low']}")
+        
         # Generate signal
         signal = self.strategy.analyze(candles_m1, candles_m5, candles_m15)
         self.current_signal = signal
