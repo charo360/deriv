@@ -329,6 +329,8 @@ class DerivClient:
         ohlc = data.get("ohlc", {})
         granularity = int(ohlc.get("granularity", 60))
         
+        logger.info(f"Received candle update: granularity={granularity}s, epoch={ohlc.get('epoch')}, close={ohlc.get('close')}")
+        
         candle = {
             "epoch": ohlc.get("epoch"),
             "open": round(float(ohlc.get("open", 0)), 4),
