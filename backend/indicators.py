@@ -176,7 +176,8 @@ class TechnicalIndicators:
         
         # DEBUG: Log last 5 close prices used for RSI calculation
         last_5_closes = df['close'].tail(5).tolist()
-        logger.info(f"RSI Calculation - Last 5 closes: {[f'{c:.2f}' for c in last_5_closes]}, RSI: {rsi:.2f}")
+        candle_count = len(df)
+        logger.info(f"RSI Calculation [{candle_count} candles] - Last 5 closes: {[f'{c:.2f}' for c in last_5_closes]}, RSI: {rsi:.2f}")
         
         # Compare with ta library for debugging
         rsi_indicator = ta.momentum.RSIIndicator(
