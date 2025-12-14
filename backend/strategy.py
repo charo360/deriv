@@ -377,9 +377,10 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # BLOCK: Don't buy when RSI is overbought (>65) - price already extended
-        if ind_m5.rsi > 65:
-            confluence_factors.append(f"BLOCKED: RSI too high for RISE ({ind_m5.rsi:.1f} > 65)")
+        # BLOCK: Don't buy when RSI is too high (>50) - price already extended
+        # In uptrend, we want to buy pullbacks (RSI 38-50), not overbought levels
+        if ind_m5.rsi > 50:
+            confluence_factors.append(f"BLOCKED: RSI too high for RISE ({ind_m5.rsi:.1f} > 50) - wait for pullback")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -430,11 +431,26 @@ class HybridAdaptiveStrategy:
             # Price not near lower BB - weak setup for RISE
             confluence_factors.append(f"M5: Price not at lower BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI in buy zone (40-50 in uptrend is good entry)
+        # RSI in buy zone (38-50 in uptrend is good entry) - REQUIRED
         if 38 <= ind_m5.rsi <= 50:
             confluence_factors.append(f"M5: RSI in buy zone ({ind_m5.rsi:.1f})")
             confidence += 20
             m5_confirmed = True
+        else:
+            # BLOCK: RSI outside ideal range for RISE in uptrend
+            confluence_factors.append(f"BLOCKED: RSI outside buy zone ({ind_m5.rsi:.1f}) - need 38-50 range")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # M1: Entry trigger
         # Stochastic turning up
@@ -484,9 +500,10 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # BLOCK: Don't sell when RSI is oversold (<35) - price already extended down
-        if ind_m5.rsi < 35:
-            confluence_factors.append(f"BLOCKED: RSI too low for FALL ({ind_m5.rsi:.1f} < 35)")
+        # BLOCK: Don't sell when RSI is too low (<50) - price already extended down
+        # In downtrend, we want to sell rallies (RSI 50-62), not oversold levels
+        if ind_m5.rsi < 50:
+            confluence_factors.append(f"BLOCKED: RSI too low for FALL ({ind_m5.rsi:.1f} < 50) - wait for rally")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -537,11 +554,26 @@ class HybridAdaptiveStrategy:
             # Price not near upper BB - weak setup for FALL
             confluence_factors.append(f"M5: Price not at upper BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI in sell zone (50-62 in downtrend is good entry)
+        # RSI in sell zone (50-62 in downtrend is good entry) - REQUIRED
         if 50 <= ind_m5.rsi <= 62:
             confluence_factors.append(f"M5: RSI in sell zone ({ind_m5.rsi:.1f})")
             confidence += 20
             m5_confirmed = True
+        else:
+            # BLOCK: RSI outside ideal range for FALL in downtrend
+            confluence_factors.append(f"BLOCKED: RSI outside sell zone ({ind_m5.rsi:.1f}) - need 50-62 range")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # M1: Entry trigger
         # Stochastic turning down
