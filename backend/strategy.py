@@ -635,7 +635,25 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bullish")
             confidence += 10
         
-        # M5: Price at lower extreme
+        # M5: Price at lower extreme - REQUIRED for mean reversion RISE
+        # Must have EITHER price at lower BB OR RSI oversold
+        at_extreme = ind_m5.price_at_lower_bb or ind_m5.rsi_oversold
+        
+        if not at_extreme:
+            confluence_factors.append(f"BLOCKED: Not at extreme for RISE (BB={ind_m5.price_at_lower_bb}, RSI={ind_m5.rsi:.1f})")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
+        
         if ind_m5.price_at_lower_bb:
             confluence_factors.append("M5: Price at lower Bollinger Band")
             confidence += 25
@@ -708,7 +726,25 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bearish")
             confidence += 10
         
-        # M5: Price at upper extreme
+        # M5: Price at upper extreme - REQUIRED for mean reversion FALL
+        # Must have EITHER price at upper BB OR RSI overbought
+        at_extreme = ind_m5.price_at_upper_bb or ind_m5.rsi_overbought
+        
+        if not at_extreme:
+            confluence_factors.append(f"BLOCKED: Not at extreme for FALL (BB={ind_m5.price_at_upper_bb}, RSI={ind_m5.rsi:.1f})")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
+        
         if ind_m5.price_at_upper_bb:
             confluence_factors.append("M5: Price at upper Bollinger Band")
             confidence += 25
