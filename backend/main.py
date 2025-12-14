@@ -39,6 +39,8 @@ class SettingsUpdate(BaseModel):
     risk_percent: Optional[float] = None
     max_martingale_steps: Optional[int] = None
     trade_duration: Optional[int] = None
+    max_daily_profit_target: Optional[float] = None
+    max_session_loss: Optional[float] = None
 
 
 async def broadcast_state(state: dict):
@@ -225,12 +227,18 @@ async def update_settings(settings: SettingsUpdate):
         trading_config.max_martingale_steps = settings.max_martingale_steps
     if settings.trade_duration is not None:
         trading_config.trade_duration = settings.trade_duration
+    if settings.max_daily_profit_target is not None:
+        trading_config.max_daily_profit_target = settings.max_daily_profit_target
+    if settings.max_session_loss is not None:
+        trading_config.max_session_loss = settings.max_session_loss
     
     # Update risk manager if bot is running
     if bot:
         bot.risk_manager.initial_stake = trading_config.initial_stake
         bot.risk_manager.risk_percent = trading_config.risk_percent
         bot.risk_manager.max_martingale_steps = trading_config.max_martingale_steps
+        bot.risk_manager.max_daily_profit_target = trading_config.max_daily_profit_target
+        bot.risk_manager.max_session_loss = trading_config.max_session_loss
     
     return {"success": True, "settings": settings.model_dump()}
 

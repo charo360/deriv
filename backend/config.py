@@ -28,6 +28,8 @@ class TradingConfig(BaseModel):
     max_martingale_steps: int = int(os.getenv("MAX_MARTINGALE_STEPS", "3"))
     max_daily_trades: int = int(os.getenv("MAX_DAILY_TRADES", "1000"))
     max_daily_loss_percent: float = float(os.getenv("MAX_DAILY_LOSS_PERCENT", "10.0"))
+    max_daily_profit_target: float = float(os.getenv("MAX_DAILY_PROFIT_TARGET", "200.0"))  # Stop trading after this profit
+    max_session_loss: float = float(os.getenv("MAX_SESSION_LOSS", "100.0"))  # Hard stop loss per session
     
     # Indicator Settings
     bollinger_period: int = 20
@@ -47,9 +49,10 @@ class TradingConfig(BaseModel):
     timeframe_alert: int = 300       # M5
     timeframe_higher: int = 900      # M15
     
-    # Server reset avoidance (GMT)
+    # Server reset avoidance (UK time - GMT/BST)
     avoid_trading_start: str = "23:55"
     avoid_trading_end: str = "00:05"
+    timezone: str = "Europe/London"  # UK time
 
 
 class ServerConfig(BaseModel):

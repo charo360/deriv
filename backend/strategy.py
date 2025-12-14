@@ -114,11 +114,13 @@ class HybridAdaptiveStrategy:
         self.hourly_stats: Dict[int, Dict[str, int]] = {h: {'wins': 0, 'losses': 0} for h in range(24)}
     
     def _detect_market_mode(self, ind_m5: IndicatorValues, ind_m15: IndicatorValues) -> MarketMode:
-        """Detect current market mode using ADX from M5 and M15."""
+        """Detect current market mode using ADX from M5 and M15 with hysteresis."""
         # Use M5 ADX for more responsive detection
         adx = ind_m5.adx
         
-        if adx > 25:
+        # Add hysteresis to prevent rapid mode switching
+        # Enter trend: ADX > 27, Exit trend: ADX < 18
+        if adx > 27:
             # Strong trend
             if ind_m5.trend_up and ind_m15.trend_up:
                 return MarketMode.TRENDING_UP
@@ -126,14 +128,15 @@ class HybridAdaptiveStrategy:
                 return MarketMode.TRENDING_DOWN
             else:
                 return MarketMode.UNCERTAIN
-        elif adx < 20:
+        elif adx < 18:
             return MarketMode.RANGING
         else:
             return MarketMode.UNCERTAIN
     
     def is_trading_allowed(self) -> tuple[bool, str]:
         """Check if trading is allowed (avoid server reset times)."""
-        now = datetime.now(pytz.UTC)
+        uk_tz = pytz.timezone('Europe/London')
+        now = datetime.now(uk_tz)
         current_time = now.time()
         
         # Parse avoid times
@@ -148,12 +151,13 @@ class HybridAdaptiveStrategy:
     
     def _get_time_confidence_bonus(self) -> tuple[int, str]:
         """
-        Get confidence bonus/penalty based on current hour.
+        Get confidence bonus/penalty based on current hour (UK time).
         
         Returns:
             tuple of (confidence_adjustment, reason)
         """
-        now = datetime.now(pytz.UTC)
+        uk_tz = pytz.timezone('Europe/London')
+        now = datetime.now(uk_tz)
         current_hour = now.hour
         
         # Check if in avoid hours
@@ -248,21 +252,28 @@ class HybridAdaptiveStrategy:
         logger.info(f"M5: close={ind_m5.close:.2f}, RSI={ind_m5.rsi:.1f}, EMA50={ind_m5.ema_50:.2f}, BB_Width={ind_m5.bb_width:.4f}, Squeeze={ind_m5.bb_squeeze}")
         logger.info(f"M15: close={ind_m15.close:.2f}, EMA200={ind_m15.ema_200:.2f}, trend_up={ind_m15.trend_up}, trend_down={ind_m15.trend_down}")
         
-        # Check for Bollinger Band squeeze (low volatility) - avoid trading
+        # Check for Bollinger Band squeeze (low volatility) - avoid trading unless breakout detected
         if ind_m5.bb_squeeze:
-            logger.info("BB SQUEEZE detected - low volatility, avoiding trades")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=[f"BB Squeeze (low volatility) - waiting for breakout"],
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
+            # Check for breakout: price breaking out of BB with volume/momentum
+            bb_breakout_up = ind_m5.close > ind_m5.bb_upper and ind_m5.rsi > 55
+            bb_breakout_down = ind_m5.close < ind_m5.bb_lower and ind_m5.rsi < 45
+            
+            if not (bb_breakout_up or bb_breakout_down):
+                logger.info("BB SQUEEZE detected - low volatility, avoiding trades")
+                return TradeSignal(
+                    signal=Signal.NONE,
+                    confidence=0,
+                    timestamp=datetime.now(pytz.UTC),
+                    price=ind_m1.close,
+                    indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                    confluence_factors=[f"BB Squeeze (low volatility) - waiting for breakout"],
+                    m1_confirmed=False,
+                    m5_confirmed=False,
+                    m15_confirmed=False,
+                    market_mode=market_mode.value
+                )
+            else:
+                logger.info(f"BB BREAKOUT detected during squeeze - proceeding with analysis")
         
         # Generate signals based on market mode
         if market_mode == MarketMode.TRENDING_UP:
@@ -300,13 +311,17 @@ class HybridAdaptiveStrategy:
         rise_adjusted = rise_signal.confidence + time_bonus
         fall_adjusted = fall_signal.confidence + time_bonus
         
-        # Return the stronger signal (minimum 60% confidence required after time adjustment)
-        if rise_adjusted > fall_adjusted and rise_adjusted >= 60:
+        # Check timeframe confluence - require at least 2 out of 3 timeframes to agree
+        rise_timeframes_agree = sum([rise_signal.m1_confirmed, rise_signal.m5_confirmed, rise_signal.m15_confirmed])
+        fall_timeframes_agree = sum([fall_signal.m1_confirmed, fall_signal.m5_confirmed, fall_signal.m15_confirmed])
+        
+        # Return the stronger signal (minimum 60% confidence + 2/3 timeframe confluence required)
+        if rise_adjusted > fall_adjusted and rise_adjusted >= 60 and rise_timeframes_agree >= 2:
             # Update confluence factors with time info
             rise_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: RISE with {rise_adjusted}% confidence ({market_mode.value})")
             return rise_signal
-        elif fall_adjusted > rise_adjusted and fall_adjusted >= 60:
+        elif fall_adjusted > rise_adjusted and fall_adjusted >= 60 and fall_timeframes_agree >= 2:
             fall_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: FALL with {fall_adjusted}% confidence ({market_mode.value})")
             return fall_signal

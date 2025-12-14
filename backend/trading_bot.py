@@ -45,7 +45,9 @@ class TradingBot:
             risk_percent=trading_config.risk_percent,
             max_martingale_steps=trading_config.max_martingale_steps,
             max_daily_trades=trading_config.max_daily_trades,
-            max_daily_loss_percent=trading_config.max_daily_loss_percent
+            max_daily_loss_percent=trading_config.max_daily_loss_percent,
+            max_daily_profit_target=trading_config.max_daily_profit_target,
+            max_session_loss=trading_config.max_session_loss
         )
         
         # State
@@ -368,7 +370,9 @@ class TradingBot:
                 "risk_percent": trading_config.risk_percent,
                 "max_martingale_steps": trading_config.max_martingale_steps,
                 "trade_duration": trading_config.trade_duration,
-                "trade_duration_unit": trading_config.trade_duration_unit
+                "trade_duration_unit": trading_config.trade_duration_unit,
+                "max_daily_profit_target": trading_config.max_daily_profit_target,
+                "max_session_loss": trading_config.max_session_loss
             }
         }
     

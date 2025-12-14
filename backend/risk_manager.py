@@ -52,6 +52,8 @@ class RiskManager:
         max_martingale_steps: int = 3,
         max_daily_trades: int = 10,
         max_daily_loss_percent: float = 10.0,
+        max_daily_profit_target: float = 200.0,
+        max_session_loss: float = 100.0,
         payout_rate: float = 0.95  # 95% payout
     ):
         self.initial_balance = initial_balance
@@ -61,6 +63,8 @@ class RiskManager:
         self.max_martingale_steps = max_martingale_steps
         self.max_daily_trades = max_daily_trades
         self.max_daily_loss_percent = max_daily_loss_percent
+        self.max_daily_profit_target = max_daily_profit_target
+        self.max_session_loss = max_session_loss
         self.payout_rate = payout_rate
         
         # State tracking
@@ -176,14 +180,22 @@ class RiskManager:
         if daily_pnl < -max_daily_loss:
             return False, f"Daily loss limit reached ({self.max_daily_loss_percent}%)"
         
+        # Hard session loss limit
+        if daily_pnl < -self.max_session_loss:
+            return False, f"Session loss limit reached (-{self.max_session_loss})"
+        
+        # Daily profit target reached - stop trading
+        if daily_pnl >= self.max_daily_profit_target:
+            return False, f"Daily profit target reached (+{self.max_daily_profit_target})"
+        
         # Balance too low
         min_stake = self.initial_stake
         if self.current_balance < min_stake:
             return False, "Insufficient balance for minimum stake"
         
-        # Consecutive loss limit (pause after 5 losses)
-        if self.consecutive_losses >= 5:
-            return False, "Consecutive loss limit reached (5). Consider pausing."
+        # Consecutive loss limit (pause after 3 losses)
+        if self.consecutive_losses >= 3:
+            return False, "Consecutive loss limit reached (3). Consider pausing."
         
         return True, "OK"
     
