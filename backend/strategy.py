@@ -315,13 +315,13 @@ class HybridAdaptiveStrategy:
         rise_timeframes_agree = sum([rise_signal.m1_confirmed, rise_signal.m5_confirmed, rise_signal.m15_confirmed])
         fall_timeframes_agree = sum([fall_signal.m1_confirmed, fall_signal.m5_confirmed, fall_signal.m15_confirmed])
         
-        # Return the stronger signal (minimum 60% confidence + 2/3 timeframe confluence required)
-        if rise_adjusted > fall_adjusted and rise_adjusted >= 60 and rise_timeframes_agree >= 2:
+        # Return the stronger signal (minimum 70% confidence + 3/3 timeframe confluence required)
+        if rise_adjusted > fall_adjusted and rise_adjusted >= 70 and rise_timeframes_agree >= 3:
             # Update confluence factors with time info
             rise_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: RISE with {rise_adjusted}% confidence ({market_mode.value})")
             return rise_signal
-        elif fall_adjusted > rise_adjusted and fall_adjusted >= 60 and fall_timeframes_agree >= 2:
+        elif fall_adjusted > rise_adjusted and fall_adjusted >= 70 and fall_timeframes_agree >= 3:
             fall_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: FALL with {fall_adjusted}% confidence ({market_mode.value})")
             return fall_signal
@@ -430,8 +430,8 @@ class HybridAdaptiveStrategy:
             # Price not near lower BB - weak setup for RISE
             confluence_factors.append(f"M5: Price not at lower BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI in buy zone (40-55 in uptrend is good entry)
-        if 35 <= ind_m5.rsi <= 55:
+        # RSI in buy zone (40-50 in uptrend is good entry)
+        if 38 <= ind_m5.rsi <= 50:
             confluence_factors.append(f"M5: RSI in buy zone ({ind_m5.rsi:.1f})")
             confidence += 20
             m5_confirmed = True
@@ -537,8 +537,8 @@ class HybridAdaptiveStrategy:
             # Price not near upper BB - weak setup for FALL
             confluence_factors.append(f"M5: Price not at upper BB (BB%={bb_percent:.2f}) - weak setup")
         
-        # RSI in sell zone (45-65 in downtrend is good entry)
-        if 45 <= ind_m5.rsi <= 65:
+        # RSI in sell zone (50-62 in downtrend is good entry)
+        if 50 <= ind_m5.rsi <= 62:
             confluence_factors.append(f"M5: RSI in sell zone ({ind_m5.rsi:.1f})")
             confidence += 20
             m5_confirmed = True
