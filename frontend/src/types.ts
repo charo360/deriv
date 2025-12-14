@@ -81,6 +81,8 @@ export interface Settings {
   max_martingale_steps: number;
   trade_duration: number;
   trade_duration_unit: string;
+  max_daily_profit_target: number;
+  max_session_loss: number;
 }
 
 export interface WebSocketMessage {

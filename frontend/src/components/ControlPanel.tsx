@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Square, Power, PowerOff, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { Play, Square, Power, PowerOff, TrendingUp, TrendingDown, Loader2, Settings } from 'lucide-react';
 
 interface ControlPanelProps {
   isRunning: boolean;
@@ -10,6 +10,8 @@ interface ControlPanelProps {
   onEnableTrading: () => void;
   onDisableTrading: () => void;
   onManualTrade: (direction: 'CALL' | 'PUT') => void;
+  onUpdateSettings: (settings: { max_daily_profit_target?: number; max_session_loss?: number }) => void;
+  currentSettings?: { max_daily_profit_target?: number; max_session_loss?: number };
 }
 
 export function ControlPanel({
@@ -21,9 +23,14 @@ export function ControlPanel({
   onEnableTrading,
   onDisableTrading,
   onManualTrade,
+  onUpdateSettings,
+  currentSettings,
 }: ControlPanelProps) {
   const [apiToken, setApiToken] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [profitTarget, setProfitTarget] = useState(currentSettings?.max_daily_profit_target?.toString() || '200');
+  const [sessionLoss, setSessionLoss] = useState(currentSettings?.max_session_loss?.toString() || '100');
 
   const handleStart = () => {
     if (apiToken.trim()) {
@@ -136,6 +143,55 @@ export function ControlPanel({
             </div>
           </div>
         )}
+
+        {/* TP/SL Settings */}
+        <div className="pt-4 border-t border-deriv-light">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-deriv-light text-white rounded hover:bg-opacity-80 text-sm"
+          >
+            <Settings className="w-4 h-4" />
+            {showSettings ? 'Hide' : 'Show'} TP/SL Settings
+          </button>
+
+          {showSettings && (
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Take Profit Target</label>
+                <input
+                  type="number"
+                  value={profitTarget}
+                  onChange={(e) => setProfitTarget(e.target.value)}
+                  placeholder="200"
+                  className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-deriv-green"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Stop Loss Limit</label>
+                <input
+                  type="number"
+                  value={sessionLoss}
+                  onChange={(e) => setSessionLoss(e.target.value)}
+                  placeholder="100"
+                  className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-deriv-red"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  onUpdateSettings({
+                    max_daily_profit_target: parseFloat(profitTarget) || 200,
+                    max_session_loss: parseFloat(sessionLoss) || 100,
+                  });
+                  setShowSettings(false);
+                }}
+                disabled={loading}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              >
+                Save Settings
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ function App() {
     enableTrading,
     disableTrading,
     manualTrade,
+    updateSettings,
   } = useApi();
 
   // Default values when not connected
@@ -94,6 +95,11 @@ function App() {
               onEnableTrading={enableTrading}
               onDisableTrading={disableTrading}
               onManualTrade={manualTrade}
+              onUpdateSettings={updateSettings}
+              currentSettings={{
+                max_daily_profit_target: state?.settings?.max_daily_profit_target,
+                max_session_loss: state?.settings?.max_session_loss,
+              }}
             />
 
             <SignalPanel
