@@ -76,6 +76,10 @@ class DerivClient:
         self.candles_m5: List[dict] = []
         self.candles_m15: List[dict] = []
         
+        # Current tick data for building incomplete candles
+        self.current_tick_price: float = 0.0
+        self.current_tick_epoch: int = 0
+        
         # Active contracts
         self.active_contracts: Dict[str, dict] = {}
     
@@ -276,11 +280,16 @@ class DerivClient:
     async def _handle_tick(self, data: dict):
         """Handle incoming tick."""
         tick = data.get("tick", {})
+        
+        # Store current tick for building incomplete candles
+        self.current_tick_price = float(tick.get("quote", 0))
+        self.current_tick_epoch = tick.get("epoch", 0)
+        
         if self.on_tick:
             await self.on_tick({
                 "symbol": tick.get("symbol"),
-                "quote": float(tick.get("quote", 0)),
-                "epoch": tick.get("epoch")
+                "quote": self.current_tick_price,
+                "epoch": self.current_tick_epoch
             })
     
     async def _handle_candle(self, data: dict):
@@ -460,11 +469,49 @@ class DerivClient:
         }
     
     def get_candles(self, timeframe: str) -> List[dict]:
-        """Get candles for a specific timeframe."""
+        """Get candles for a specific timeframe, including current incomplete candle."""
+        candles = []
+        granularity = 0
+        
         if timeframe == "m1":
-            return self.candles_m1.copy()
+            candles = self.candles_m1.copy()
+            granularity = 60
         elif timeframe == "m5":
-            return self.candles_m5.copy()
+            candles = self.candles_m5.copy()
+            granularity = 300
         elif timeframe == "m15":
-            return self.candles_m15.copy()
-        return []
+            candles = self.candles_m15.copy()
+            granularity = 900
+        else:
+            return []
+        
+        # Add current incomplete candle if we have tick data
+        if candles and self.current_tick_price > 0 and self.current_tick_epoch > 0:
+            last_candle = candles[-1]
+            last_candle_epoch = last_candle['epoch']
+            
+            # Calculate current candle's epoch (start of current period)
+            current_candle_epoch = (self.current_tick_epoch // granularity) * granularity
+            
+            # If current tick is in a new candle period, create incomplete candle
+            if current_candle_epoch > last_candle_epoch:
+                incomplete_candle = {
+                    'epoch': current_candle_epoch,
+                    'open': last_candle['close'],  # Open = previous close
+                    'high': max(last_candle['close'], self.current_tick_price),
+                    'low': min(last_candle['close'], self.current_tick_price),
+                    'close': self.current_tick_price
+                }
+                candles.append(incomplete_candle)
+            # If current tick is in the same period as last candle, update it
+            elif current_candle_epoch == last_candle_epoch:
+                # Update the last candle with current tick
+                candles[-1] = {
+                    'epoch': last_candle['epoch'],
+                    'open': last_candle['open'],
+                    'high': max(last_candle['high'], self.current_tick_price),
+                    'low': min(last_candle['low'], self.current_tick_price),
+                    'close': self.current_tick_price
+                }
+        
+        return candles
