@@ -161,13 +161,26 @@ class TradingBot:
             return
         
         # DEBUG: Log last 5 M1 candles to verify data freshness
-        if candles_m1:
-            logger.info(f"M1 Candles count: {len(candles_m1)}")
-            logger.info(f"Last 5 M1 candles:")
-            for candle in candles_m1[-5:]:
-                from datetime import datetime as dt
-                candle_time = dt.fromtimestamp(candle['epoch'])
-                logger.info(f"  Time: {candle_time}, Close: {candle['close']}, High: {candle['high']}, Low: {candle['low']}")
+        # Log M1 candle data for debugging
+        logger.info(f"M1 Candles count: {len(candles_m1)}")
+        logger.info("Last 5 M1 candles:")
+        for candle in candles_m1[-5:]:
+            timestamp = datetime.fromtimestamp(candle["epoch"]).strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"  Time: {timestamp}, Close: {candle['close']}, High: {candle['high']}, Low: {candle['low']}")
+        
+        # Log M5 candle data for debugging
+        logger.info(f"M5 Candles count: {len(candles_m5)}")
+        logger.info("Last 5 M5 candles:")
+        for candle in candles_m5[-5:]:
+            timestamp = datetime.fromtimestamp(candle["epoch"]).strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"  Time: {timestamp}, Close: {candle['close']}, High: {candle['high']}, Low: {candle['low']}")
+        
+        # Log M15 candle data for debugging
+        logger.info(f"M15 Candles count: {len(candles_m15)}")
+        logger.info("Last 5 M15 candles:")
+        for candle in candles_m15[-5:]:
+            timestamp = datetime.fromtimestamp(candle["epoch"]).strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"  Time: {timestamp}, Close: {candle['close']}, High: {candle['high']}, Low: {candle['low']}")
         
         # Generate signal
         signal = self.strategy.analyze(candles_m1, candles_m5, candles_m15)
