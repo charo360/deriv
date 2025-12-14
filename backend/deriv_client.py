@@ -281,8 +281,8 @@ class DerivClient:
         """Handle incoming tick."""
         tick = data.get("tick", {})
         
-        # Store current tick for building incomplete candles
-        self.current_tick_price = float(tick.get("quote", 0))
+        # Store current tick for building incomplete candles (round to 4 decimals)
+        self.current_tick_price = round(float(tick.get("quote", 0)), 4)
         self.current_tick_epoch = tick.get("epoch", 0)
         
         if self.on_tick:
@@ -299,10 +299,10 @@ class DerivClient:
         
         candle = {
             "epoch": ohlc.get("epoch"),
-            "open": float(ohlc.get("open", 0)),
-            "high": float(ohlc.get("high", 0)),
-            "low": float(ohlc.get("low", 0)),
-            "close": float(ohlc.get("close", 0))
+            "open": round(float(ohlc.get("open", 0)), 4),
+            "high": round(float(ohlc.get("high", 0)), 4),
+            "low": round(float(ohlc.get("low", 0)), 4),
+            "close": round(float(ohlc.get("close", 0)), 4)
         }
         
         # Update appropriate candle list
@@ -497,10 +497,10 @@ class DerivClient:
             if current_candle_epoch > last_candle_epoch:
                 incomplete_candle = {
                     'epoch': current_candle_epoch,
-                    'open': last_candle['close'],  # Open = previous close
-                    'high': max(last_candle['close'], self.current_tick_price),
-                    'low': min(last_candle['close'], self.current_tick_price),
-                    'close': self.current_tick_price
+                    'open': round(last_candle['close'], 4),
+                    'high': round(max(last_candle['close'], self.current_tick_price), 4),
+                    'low': round(min(last_candle['close'], self.current_tick_price), 4),
+                    'close': round(self.current_tick_price, 4)
                 }
                 candles.append(incomplete_candle)
                 logger.debug(f"{timeframe.upper()}: Added NEW incomplete candle - O:{incomplete_candle['open']:.2f} H:{incomplete_candle['high']:.2f} L:{incomplete_candle['low']:.2f} C:{incomplete_candle['close']:.2f}")
@@ -509,10 +509,10 @@ class DerivClient:
                 # Update the last candle with current tick
                 updated_candle = {
                     'epoch': last_candle['epoch'],
-                    'open': last_candle['open'],
-                    'high': max(last_candle['high'], self.current_tick_price),
-                    'low': min(last_candle['low'], self.current_tick_price),
-                    'close': self.current_tick_price
+                    'open': round(last_candle['open'], 4),
+                    'high': round(max(last_candle['high'], self.current_tick_price), 4),
+                    'low': round(min(last_candle['low'], self.current_tick_price), 4),
+                    'close': round(self.current_tick_price, 4)
                 }
                 candles[-1] = updated_candle
                 logger.debug(f"{timeframe.upper()}: Updated LIVE candle - O:{updated_candle['open']:.2f} H:{updated_candle['high']:.2f} L:{updated_candle['low']:.2f} C:{updated_candle['close']:.2f}")
