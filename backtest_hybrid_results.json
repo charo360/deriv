@@ -1,0 +1,33 @@
+{
+  "total_steps": 4264,
+  "call_signals": 0,
+  "put_signals": 0,
+  "no_signals": 4264,
+  "executed_trades": 0,
+  "market_modes": {
+    "trending_up": 0,
+    "trending_down": 0,
+    "ranging": 0,
+    "uncertain": 4264
+  },
+  "trade_duration_seconds": 180,
+  "min_trade_interval_seconds": 60,
+  "fill_at": "close",
+  "use_live_proposal_payout": false,
+  "proposal_throttle_ms": 0,
+  "payout_rate": 0.95,
+  "statistics": {
+    "total_trades": 0,
+    "win_rate": 0.0,
+    "total_profit": 0.0,
+    "profit_factor": 0.0,
+    "expectancy": 0.0,
+    "max_drawdown": 0.0,
+    "current_balance": 1000.0,
+    "consecutive_losses": 0,
+    "martingale_step": 0,
+    "daily_trades": 0,
+    "daily_pnl": 0.0
+  },
+  "trades": []
+}

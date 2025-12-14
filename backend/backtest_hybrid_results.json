@@ -1,0 +1,13 @@
+{
+  "total_signals": 1277,
+  "call_signals": 0,
+  "put_signals": 0,
+  "no_signals": 1277,
+  "signals": [],
+  "market_modes": {
+    "trending_up": 0,
+    "trending_down": 0,
+    "ranging": 0,
+    "uncertain": 1277
+  }
+}

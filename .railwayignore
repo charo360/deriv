@@ -1,0 +1,6 @@
+# Force Railway to rebuild by clearing cache
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
