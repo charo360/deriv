@@ -377,9 +377,9 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # STRICT: Only trade RISE when M1 RSI is oversold (< 35)
-        if ind_m1.rsi >= 35:
-            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.2f}) - need RSI < 35 for RISE")
+        # BALANCED: M1 RSI oversold with graduated confidence (< 40)
+        if ind_m1.rsi >= 40:
+            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.2f}) - need RSI < 40 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -392,6 +392,18 @@ class HybridAdaptiveStrategy:
                 m15_confirmed=False,
                 market_mode=market_mode.value
             )
+        
+        # Graduated RSI confidence
+        if ind_m1.rsi < 30:
+            confluence_factors.append(f"M1: RSI extreme oversold ({ind_m1.rsi:.2f}) - strong reversal zone")
+            confidence += 35
+        elif ind_m1.rsi < 35:
+            confluence_factors.append(f"M1: RSI oversold ({ind_m1.rsi:.2f}) - reversal zone")
+            confidence += 30
+        else:  # 35-40
+            confluence_factors.append(f"M1: RSI moderate oversold ({ind_m1.rsi:.2f}) - early reversal")
+            confidence += 20
+        m1_confirmed = True
         
         # M15: Confirm uptrend
         if ind_m15.trend_up:
@@ -412,15 +424,12 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M5: MACD bullish momentum (histogram={ind_m5.macd_histogram:.4f})")
             confidence += 15
         
-        # M5: Look for pullback conditions - MUST be near lower BB for RISE
-        # Use BB %B to check position: <0.25 means in lower 25% of bands
+        # M5: Look for pullback conditions - BALANCED: BB% < 0.30 (lower 30% of bands)
         bb_percent = ind_m5.bb_percent
-        near_lower_bb = bb_percent <= 0.25  # Price in lower 25% of BB range
-        at_lower_bb = ind_m5.close <= ind_m5.bb_lower * 1.005  # Within 0.5% of lower BB
         
-        # REQUIRED: Price must be at lower BB (not just near)
-        if not at_lower_bb:
-            confluence_factors.append(f"BLOCKED: Price not at lower BB (BB%={bb_percent:.2f}) - need price at BB for RISE")
+        # REQUIRED: Price must be in lower 30% of BB range
+        if bb_percent >= 0.30:
+            confluence_factors.append(f"BLOCKED: Price not in lower BB zone (BB%={bb_percent:.2f}) - need BB% < 0.30 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -434,14 +443,18 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        confluence_factors.append(f"M5: At lower BB ({ind_m5.bb_lower:.2f})")
-        confidence += 30
-        m5_confirmed = True
+        # Graduated BB confidence based on position
+        if bb_percent <= 0.10:  # Very close to lower BB
+            confluence_factors.append(f"M5: At lower BB (BB%={bb_percent:.2f}) - extreme")
+            confidence += 30
+        elif bb_percent <= 0.20:  # Near lower BB
+            confluence_factors.append(f"M5: Near lower BB (BB%={bb_percent:.2f})")
+            confidence += 25
+        else:  # 0.20-0.30
+            confluence_factors.append(f"M5: In lower BB zone (BB%={bb_percent:.2f})")
+            confidence += 20
         
-        # M1 RSI oversold confirmation (< 35)
-        confluence_factors.append(f"M1: RSI oversold ({ind_m1.rsi:.2f}) - extreme reversal zone")
-        confidence += 30
-        m1_confirmed = True
+        m5_confirmed = True
         
         # M1 ADX: Check if pullback is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
@@ -502,9 +515,9 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # STRICT: Only trade FALL when M1 RSI is overbought (> 65)
-        if ind_m1.rsi <= 65:
-            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.2f}) - need RSI > 65 for FALL")
+        # BALANCED: M1 RSI overbought with graduated confidence (> 60)
+        if ind_m1.rsi <= 60:
+            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.2f}) - need RSI > 60 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -517,6 +530,18 @@ class HybridAdaptiveStrategy:
                 m15_confirmed=False,
                 market_mode=market_mode.value
             )
+        
+        # Graduated RSI confidence
+        if ind_m1.rsi > 70:
+            confluence_factors.append(f"M1: RSI extreme overbought ({ind_m1.rsi:.2f}) - strong reversal zone")
+            confidence += 35
+        elif ind_m1.rsi > 65:
+            confluence_factors.append(f"M1: RSI overbought ({ind_m1.rsi:.2f}) - reversal zone")
+            confidence += 30
+        else:  # 60-65
+            confluence_factors.append(f"M1: RSI moderate overbought ({ind_m1.rsi:.2f}) - early reversal")
+            confidence += 20
+        m1_confirmed = True
         
         # M15: Confirm downtrend
         if ind_m15.trend_down:
@@ -537,15 +562,12 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M5: MACD bearish momentum (histogram={ind_m5.macd_histogram:.4f})")
             confidence += 15
         
-        # M5: Look for rally conditions - MUST be near upper BB for FALL
-        # Use BB %B to check position: >0.8 means in upper 20% of bands
+        # M5: Look for rally conditions - BALANCED: BB% > 0.70 (upper 30% of bands)
         bb_percent = ind_m5.bb_percent
-        near_upper_bb = bb_percent >= 0.75  # Price in upper 25% of BB range
-        at_upper_bb = ind_m5.close >= ind_m5.bb_upper * 0.995  # Within 0.5% of upper BB
         
-        # REQUIRED: Price must be at upper BB (not just near)
-        if not at_upper_bb:
-            confluence_factors.append(f"BLOCKED: Price not at upper BB (BB%={bb_percent:.2f}) - need price at BB for FALL")
+        # REQUIRED: Price must be in upper 30% of BB range
+        if bb_percent <= 0.70:
+            confluence_factors.append(f"BLOCKED: Price not in upper BB zone (BB%={bb_percent:.2f}) - need BB% > 0.70 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -559,14 +581,18 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        confluence_factors.append(f"M5: At upper BB ({ind_m5.bb_upper:.2f})")
-        confidence += 30
-        m5_confirmed = True
+        # Graduated BB confidence based on position
+        if bb_percent >= 0.90:  # Very close to upper BB
+            confluence_factors.append(f"M5: At upper BB (BB%={bb_percent:.2f}) - extreme")
+            confidence += 30
+        elif bb_percent >= 0.80:  # Near upper BB
+            confluence_factors.append(f"M5: Near upper BB (BB%={bb_percent:.2f})")
+            confidence += 25
+        else:  # 0.70-0.80
+            confluence_factors.append(f"M5: In upper BB zone (BB%={bb_percent:.2f})")
+            confidence += 20
         
-        # M1 RSI overbought confirmation (> 65)
-        confluence_factors.append(f"M1: RSI overbought ({ind_m1.rsi:.2f}) - extreme reversal zone")
-        confidence += 30
-        m1_confirmed = True
+        m5_confirmed = True
         
         # M1 ADX: Check if rally is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
@@ -639,9 +665,9 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bullish")
             confidence += 10
         
-        # STRICT: Only trade RISE when M1 RSI is oversold (< 35)
-        if ind_m1.rsi >= 35:
-            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.2f}) - need RSI < 35 for RISE")
+        # BALANCED: M1 RSI oversold with graduated confidence (< 40)
+        if ind_m1.rsi >= 40:
+            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.2f}) - need RSI < 40 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -655,9 +681,22 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        # REQUIRED: Price must be at lower BB
-        if not ind_m5.price_at_lower_bb:
-            confluence_factors.append(f"BLOCKED: Price not at lower BB - need BB extreme for RISE")
+        # Graduated RSI confidence
+        if ind_m1.rsi < 30:
+            confluence_factors.append(f"M1: RSI extreme oversold ({ind_m1.rsi:.2f}) - strong reversal zone")
+            confidence += 35
+        elif ind_m1.rsi < 35:
+            confluence_factors.append(f"M1: RSI oversold ({ind_m1.rsi:.2f}) - reversal zone")
+            confidence += 30
+        else:  # 35-40
+            confluence_factors.append(f"M1: RSI moderate oversold ({ind_m1.rsi:.2f}) - early reversal")
+            confidence += 20
+        m1_confirmed = True
+        
+        # REQUIRED: Price must be in lower 30% of BB range
+        bb_percent = ind_m5.bb_percent
+        if bb_percent >= 0.30:
+            confluence_factors.append(f"BLOCKED: Price not in lower BB zone (BB%={bb_percent:.2f}) - need BB% < 0.30 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -671,12 +710,16 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        confluence_factors.append("M5: Price at lower Bollinger Band")
-        confidence += 30
-        m5_confirmed = True
-        
-        confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.2f}) - extreme reversal zone")
-        confidence += 30
+        # Graduated BB confidence
+        if bb_percent <= 0.10:
+            confluence_factors.append(f"M5: At lower BB (BB%={bb_percent:.2f}) - extreme")
+            confidence += 30
+        elif bb_percent <= 0.20:
+            confluence_factors.append(f"M5: Near lower BB (BB%={bb_percent:.2f})")
+            confidence += 25
+        else:
+            confluence_factors.append(f"M5: In lower BB zone (BB%={bb_percent:.2f})")
+            confidence += 20
         m5_confirmed = True
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
@@ -749,9 +792,9 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M1: MACD momentum turning bearish")
             confidence += 10
         
-        # STRICT: Only trade FALL when M1 RSI is overbought (> 65)
-        if ind_m1.rsi <= 65:
-            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.2f}) - need RSI > 65 for FALL")
+        # BALANCED: M1 RSI overbought with graduated confidence (> 60)
+        if ind_m1.rsi <= 60:
+            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.2f}) - need RSI > 60 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -765,9 +808,22 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        # REQUIRED: Price must be at upper BB
-        if not ind_m5.price_at_upper_bb:
-            confluence_factors.append(f"BLOCKED: Price not at upper BB - need BB extreme for FALL")
+        # Graduated RSI confidence
+        if ind_m1.rsi > 70:
+            confluence_factors.append(f"M1: RSI extreme overbought ({ind_m1.rsi:.2f}) - strong reversal zone")
+            confidence += 35
+        elif ind_m1.rsi > 65:
+            confluence_factors.append(f"M1: RSI overbought ({ind_m1.rsi:.2f}) - reversal zone")
+            confidence += 30
+        else:  # 60-65
+            confluence_factors.append(f"M1: RSI moderate overbought ({ind_m1.rsi:.2f}) - early reversal")
+            confidence += 20
+        m1_confirmed = True
+        
+        # REQUIRED: Price must be in upper 30% of BB range
+        bb_percent = ind_m5.bb_percent
+        if bb_percent <= 0.70:
+            confluence_factors.append(f"BLOCKED: Price not in upper BB zone (BB%={bb_percent:.2f}) - need BB% > 0.70 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -781,12 +837,16 @@ class HybridAdaptiveStrategy:
                 market_mode=market_mode.value
             )
         
-        confluence_factors.append("M5: Price at upper Bollinger Band")
-        confidence += 30
-        m5_confirmed = True
-        
-        confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.2f}) - extreme reversal zone")
-        confidence += 30
+        # Graduated BB confidence
+        if bb_percent >= 0.90:
+            confluence_factors.append(f"M5: At upper BB (BB%={bb_percent:.2f}) - extreme")
+            confidence += 30
+        elif bb_percent >= 0.80:
+            confluence_factors.append(f"M5: Near upper BB (BB%={bb_percent:.2f})")
+            confidence += 25
+        else:
+            confluence_factors.append(f"M5: In upper BB zone (BB%={bb_percent:.2f})")
+            confidence += 20
         m5_confirmed = True
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
