@@ -411,34 +411,21 @@ class HybridAdaptiveStrategy:
         # M5: Look for pullback conditions - BALANCED: BB% < 0.30 (lower 30% of bands)
         bb_percent = ind_m5.bb_percent
         
-        # REQUIRED: Price must be in lower 30% of BB range
-        if bb_percent >= 0.30:
-            confluence_factors.append(f"BLOCKED: Price not in lower BB zone (BB%={bb_percent:.2f}) - need BB% < 0.30 for RISE")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=confluence_factors,
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
-        
-        # Graduated BB confidence based on position
+        # Check BB position - add confidence if in lower zone, but don't block if not
         if bb_percent <= 0.10:  # Very close to lower BB
             confluence_factors.append(f"M5: At lower BB (BB%={bb_percent:.2f}) - extreme")
             confidence += 30
+            m5_confirmed = True
         elif bb_percent <= 0.20:  # Near lower BB
             confluence_factors.append(f"M5: Near lower BB (BB%={bb_percent:.2f})")
             confidence += 25
-        else:  # 0.20-0.30
+            m5_confirmed = True
+        elif bb_percent < 0.30:  # In lower zone
             confluence_factors.append(f"M5: In lower BB zone (BB%={bb_percent:.2f})")
             confidence += 20
-        
-        m5_confirmed = True
+            m5_confirmed = True
+        else:
+            confluence_factors.append(f"M5: Not in lower BB zone (BB%={bb_percent:.2f}) - waiting for BB% < 0.30")
         
         # M1 ADX: Check if pullback is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
@@ -549,34 +536,21 @@ class HybridAdaptiveStrategy:
         # M5: Look for rally conditions - BALANCED: BB% > 0.70 (upper 30% of bands)
         bb_percent = ind_m5.bb_percent
         
-        # REQUIRED: Price must be in upper 30% of BB range
-        if bb_percent <= 0.70:
-            confluence_factors.append(f"BLOCKED: Price not in upper BB zone (BB%={bb_percent:.2f}) - need BB% > 0.70 for FALL")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=confluence_factors,
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
-        
-        # Graduated BB confidence based on position
+        # Check BB position - add confidence if in upper zone, but don't block if not
         if bb_percent >= 0.90:  # Very close to upper BB
             confluence_factors.append(f"M5: At upper BB (BB%={bb_percent:.2f}) - extreme")
             confidence += 30
+            m5_confirmed = True
         elif bb_percent >= 0.80:  # Near upper BB
             confluence_factors.append(f"M5: Near upper BB (BB%={bb_percent:.2f})")
             confidence += 25
-        else:  # 0.70-0.80
+            m5_confirmed = True
+        elif bb_percent >= 0.70:  # In upper zone
             confluence_factors.append(f"M5: In upper BB zone (BB%={bb_percent:.2f})")
             confidence += 20
-        
-        m5_confirmed = True
+            m5_confirmed = True
+        else:
+            confluence_factors.append(f"M5: Not in upper BB zone (BB%={bb_percent:.2f}) - waiting for BB% > 0.70")
         
         # M1 ADX: Check if rally is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
@@ -677,34 +651,22 @@ class HybridAdaptiveStrategy:
             confidence += 20
         m1_confirmed = True
         
-        # REQUIRED: Price must be in lower 30% of BB range
+        # Check BB position - add confidence if in lower zone, but don't block if not
         bb_percent = ind_m5.bb_percent
-        if bb_percent >= 0.30:
-            confluence_factors.append(f"BLOCKED: Price not in lower BB zone (BB%={bb_percent:.2f}) - need BB% < 0.30 for RISE")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=confluence_factors,
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
-        
-        # Graduated BB confidence
         if bb_percent <= 0.10:
             confluence_factors.append(f"M5: At lower BB (BB%={bb_percent:.2f}) - extreme")
             confidence += 30
+            m5_confirmed = True
         elif bb_percent <= 0.20:
             confluence_factors.append(f"M5: Near lower BB (BB%={bb_percent:.2f})")
             confidence += 25
-        else:
+            m5_confirmed = True
+        elif bb_percent < 0.30:
             confluence_factors.append(f"M5: In lower BB zone (BB%={bb_percent:.2f})")
             confidence += 20
-        m5_confirmed = True
+            m5_confirmed = True
+        else:
+            confluence_factors.append(f"M5: Not in lower BB zone (BB%={bb_percent:.2f}) - waiting for BB% < 0.30")
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
         if ind_m1.adx < 20:
@@ -804,34 +766,22 @@ class HybridAdaptiveStrategy:
             confidence += 20
         m1_confirmed = True
         
-        # REQUIRED: Price must be in upper 30% of BB range
+        # Check BB position - add confidence if in upper zone, but don't block if not
         bb_percent = ind_m5.bb_percent
-        if bb_percent <= 0.70:
-            confluence_factors.append(f"BLOCKED: Price not in upper BB zone (BB%={bb_percent:.2f}) - need BB% > 0.70 for FALL")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=confluence_factors,
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
-        
-        # Graduated BB confidence
         if bb_percent >= 0.90:
             confluence_factors.append(f"M5: At upper BB (BB%={bb_percent:.2f}) - extreme")
             confidence += 30
+            m5_confirmed = True
         elif bb_percent >= 0.80:
             confluence_factors.append(f"M5: Near upper BB (BB%={bb_percent:.2f})")
             confidence += 25
-        else:
+            m5_confirmed = True
+        elif bb_percent > 0.70:
             confluence_factors.append(f"M5: In upper BB zone (BB%={bb_percent:.2f})")
             confidence += 20
-        m5_confirmed = True
+            m5_confirmed = True
+        else:
+            confluence_factors.append(f"M5: Not in upper BB zone (BB%={bb_percent:.2f}) - waiting for BB% > 0.70")
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
         if ind_m1.adx < 20:
