@@ -28,6 +28,7 @@ class ReplayTrade:
     mfe: float
     t_mae: int
     t_mfe: int
+    loss_streak_after: int
 
 
 def _bisect_last_leq_epoch(candles: List[Dict[str, Any]], epoch: int) -> Optional[int]:
@@ -120,6 +121,8 @@ class LiveReplayBacktester:
         warmup_m1: int,
         min_trade_interval_s: int,
         max_trades: int,
+        max_consecutive_losses: int,
+        loss_cooldown_seconds: int,
     ):
         self.client = DerivClient(api_token)
         self.strategy = HybridAdaptiveStrategy()
@@ -129,6 +132,8 @@ class LiveReplayBacktester:
         self.warmup_m1 = int(warmup_m1)
         self.min_trade_interval_s = int(min_trade_interval_s)
         self.max_trades = int(max_trades)
+        self.max_consecutive_losses = int(max_consecutive_losses)
+        self.loss_cooldown_seconds = int(loss_cooldown_seconds)
 
         self.trades: List[ReplayTrade] = []
 
@@ -173,6 +178,8 @@ class LiveReplayBacktester:
             m15 = await self.fetch_candles(900, m15_needed)
 
             last_trade_epoch: Optional[int] = None
+            consecutive_losses = 0
+            cooldown_until_epoch: Optional[int] = None
 
             for i in range(self.warmup_m1, len(m1)):
                 if self.max_trades > 0 and len(self.trades) >= self.max_trades:
@@ -180,6 +187,13 @@ class LiveReplayBacktester:
 
                 m1_window = m1[: i + 1]
                 current_epoch = int(m1_window[-1]["epoch"])
+
+                # Cooldown after losses (models RiskManager behavior to protect Martingale)
+                if cooldown_until_epoch is not None:
+                    if current_epoch < cooldown_until_epoch:
+                        continue
+                    cooldown_until_epoch = None
+                    consecutive_losses = 0
 
                 if last_trade_epoch is not None:
                     if current_epoch - last_trade_epoch < self.min_trade_interval_s:
@@ -217,6 +231,13 @@ class LiveReplayBacktester:
                 result, profit_mult = _settle_rise_fall(direction, entry_price, exit_price, self.payout_rate)
                 profit = profit_mult
 
+                if result == "WIN":
+                    consecutive_losses = 0
+                elif result == "LOSS":
+                    consecutive_losses += 1
+                    if self.max_consecutive_losses > 0 and consecutive_losses >= self.max_consecutive_losses and self.loss_cooldown_seconds > 0:
+                        cooldown_until_epoch = int(exit_epoch + self.loss_cooldown_seconds)
+
                 self.trades.append(
                     ReplayTrade(
                         direction=direction,
@@ -232,6 +253,7 @@ class LiveReplayBacktester:
                         mfe=float(mfe),
                         t_mae=int(t_mae),
                         t_mfe=int(t_mfe),
+                        loss_streak_after=int(consecutive_losses),
                     )
                 )
 
@@ -241,6 +263,11 @@ class LiveReplayBacktester:
             await self.client.disconnect()
 
     def summary(self) -> Dict[str, Any]:
+        def _max_loss_streak_guarded(trades: List[ReplayTrade]) -> int:
+            if not trades:
+                return 0
+            return max(int(getattr(t, "loss_streak_after", 0)) for t in trades)
+
         total = len(self.trades)
         wins = sum(1 for t in self.trades if t.result == "WIN")
         losses = sum(1 for t in self.trades if t.result == "LOSS")
@@ -252,6 +279,18 @@ class LiveReplayBacktester:
         mode_counts: Dict[str, int] = {}
         for t in self.trades:
             mode_counts[t.market_mode] = mode_counts.get(t.market_mode, 0) + 1
+
+        max_loss_streak = _max_loss_streak_guarded(self.trades)
+
+        max_loss_streak_by_direction: Dict[str, int] = {}
+        for d in ("CALL", "PUT"):
+            filtered = [t for t in self.trades if t.direction == d]
+            max_loss_streak_by_direction[d] = _max_loss_streak_guarded(filtered)
+
+        max_loss_streak_by_mode: Dict[str, int] = {}
+        for mode in sorted(mode_counts.keys()):
+            filtered = [t for t in self.trades if t.market_mode == mode]
+            max_loss_streak_by_mode[mode] = _max_loss_streak_guarded(filtered)
 
         return {
             "symbol": self.symbol,
@@ -265,6 +304,9 @@ class LiveReplayBacktester:
             "avg_mae": avg_mae,
             "avg_mfe": avg_mfe,
             "modes": mode_counts,
+            "max_loss_streak": max_loss_streak,
+            "max_loss_streak_by_direction": max_loss_streak_by_direction,
+            "max_loss_streak_by_mode": max_loss_streak_by_mode,
         }
 
     def write_csv(self, out_path: str) -> None:
@@ -292,6 +334,8 @@ async def _amain() -> int:
     parser.add_argument("--warmup", type=int, default=int(os.getenv("BACKTEST_WARMUP", "250")))
     parser.add_argument("--min-interval", type=int, default=int(os.getenv("BACKTEST_MIN_INTERVAL", "60")))
     parser.add_argument("--max-trades", type=int, default=int(os.getenv("BACKTEST_MAX_TRADES", "200")))
+    parser.add_argument("--max-consecutive-losses", type=int, default=int(os.getenv("MAX_CONSECUTIVE_LOSSES", "3")))
+    parser.add_argument("--loss-cooldown-seconds", type=int, default=int(os.getenv("LOSS_COOLDOWN_SECONDS", "600")))
     args = parser.parse_args()
 
     bt = LiveReplayBacktester(
@@ -302,6 +346,8 @@ async def _amain() -> int:
         warmup_m1=int(args.warmup),
         min_trade_interval_s=int(args.min_interval),
         max_trades=int(args.max_trades),
+        max_consecutive_losses=int(args.max_consecutive_losses),
+        loss_cooldown_seconds=int(args.loss_cooldown_seconds),
     )
 
     await bt.run(m1_count=int(args.m1_count))

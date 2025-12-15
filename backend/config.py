@@ -26,6 +26,8 @@ class TradingConfig(BaseModel):
     
     # Risk Management
     max_martingale_steps: int = int(os.getenv("MAX_MARTINGALE_STEPS", "3"))
+    max_consecutive_losses: int = int(os.getenv("MAX_CONSECUTIVE_LOSSES", "3"))
+    loss_cooldown_seconds: int = int(os.getenv("LOSS_COOLDOWN_SECONDS", "600"))
     max_daily_trades: int = int(os.getenv("MAX_DAILY_TRADES", "1000"))
     max_daily_loss_percent: float = float(os.getenv("MAX_DAILY_LOSS_PERCENT", "10.0"))
     max_daily_profit_target: float = float(os.getenv("MAX_DAILY_PROFIT_TARGET", "200.0"))  # Stop trading after this profit

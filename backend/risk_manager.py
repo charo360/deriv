@@ -1,7 +1,7 @@
 """Risk management module with capped Martingale and position sizing."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional, Dict
 from enum import Enum
 import logging
@@ -50,6 +50,8 @@ class RiskManager:
         initial_stake: float = 10.0,
         risk_percent: float = 2.0,
         max_martingale_steps: int = 3,
+        max_consecutive_losses: int = 3,
+        loss_cooldown_seconds: int = 600,
         max_daily_trades: int = 10,
         max_daily_loss_percent: float = 10.0,
         max_daily_profit_target: float = 200.0,
@@ -61,6 +63,8 @@ class RiskManager:
         self.initial_stake = initial_stake
         self.risk_percent = risk_percent
         self.max_martingale_steps = max_martingale_steps
+        self.max_consecutive_losses = max_consecutive_losses
+        self.loss_cooldown_seconds = loss_cooldown_seconds
         self.max_daily_trades = max_daily_trades
         self.max_daily_loss_percent = max_daily_loss_percent
         self.max_daily_profit_target = max_daily_profit_target
@@ -70,6 +74,7 @@ class RiskManager:
         # State tracking
         self.consecutive_losses = 0
         self.current_martingale_step = 0
+        self.pause_until: Optional[datetime] = None
         self.daily_trades: List[TradeRecord] = []
         self.all_trades: List[TradeRecord] = []
         self.current_date = date.today()
@@ -193,9 +198,20 @@ class RiskManager:
         if self.current_balance < min_stake:
             return False, "Insufficient balance for minimum stake"
         
-        # Consecutive loss limit (pause after 3 losses)
-        if self.consecutive_losses >= 3:
-            return False, "Consecutive loss limit reached (3). Consider pausing."
+        now = datetime.now(timezone.utc)
+
+        # Cooldown pause (triggered by max consecutive losses)
+        if self.pause_until is not None:
+            if now < self.pause_until:
+                remaining = int((self.pause_until - now).total_seconds())
+                return False, f"Cooldown active after losses ({remaining}s remaining)"
+            # Cooldown finished: clear pause and reset streak
+            self.pause_until = None
+            self.consecutive_losses = 0
+
+        # Consecutive loss limit: hard block the 4th trade in a row.
+        if self.consecutive_losses >= self.max_consecutive_losses:
+            return False, f"Consecutive loss limit reached ({self.max_consecutive_losses})"
         
         return True, "OK"
     
@@ -216,6 +232,10 @@ class RiskManager:
             self.total_losses += 1
             self.consecutive_losses += 1
             self.current_martingale_step = 0  # No Martingale - keep at 0
+
+            # Trigger cooldown once we hit max consecutive losses.
+            if self.consecutive_losses >= self.max_consecutive_losses and self.loss_cooldown_seconds > 0:
+                self.pause_until = datetime.now(timezone.utc) + timedelta(seconds=int(self.loss_cooldown_seconds))
         # TIE doesn't affect counters
     
     def get_statistics(self) -> dict:
@@ -261,6 +281,11 @@ class RiskManager:
         
         daily_pnl = sum(t.profit for t in self.daily_trades)
         
+        now = datetime.now(timezone.utc)
+        pause_remaining_s = 0
+        if self.pause_until is not None and now < self.pause_until:
+            pause_remaining_s = int((self.pause_until - now).total_seconds())
+
         return {
             'total_trades': total_trades,
             'wins': wins,
@@ -273,6 +298,7 @@ class RiskManager:
             'current_balance': round(self.current_balance, 2),
             'consecutive_losses': self.consecutive_losses,
             'martingale_step': self.current_martingale_step,
+            'cooldown_remaining_s': pause_remaining_s,
             'daily_trades': len(self.daily_trades),
             'daily_pnl': round(daily_pnl, 2)
         }
@@ -302,6 +328,7 @@ class RiskManager:
         self.daily_trades.clear()
         self.consecutive_losses = 0
         self.current_martingale_step = 0
+        self.pause_until = None
         self.total_wins = 0
         self.total_losses = 0
         logger.info("Trade history cleared")
@@ -315,6 +342,7 @@ class RiskManager:
         
         self.consecutive_losses = 0
         self.current_martingale_step = 0
+        self.pause_until = None
         self.daily_trades = []
         self.all_trades = []
         self.total_wins = 0
