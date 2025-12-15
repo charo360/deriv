@@ -136,21 +136,22 @@ class TechnicalIndicators:
         
         return rsi
     
-    def _calculate_stochastic(self, high: pd.Series, low: pd.Series, close: pd.Series, k_period: int = 14, d_period: int = 3) -> tuple:
+    def _calculate_stochastic(self, high: pd.Series, low: pd.Series, close: pd.Series, k_period: int = 14, d_period: int = 3, smooth: int = 3) -> tuple:
         """
-        Calculate Stochastic Oscillator %K and %D using standard formula.
-        %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100
-        %D = 3-period SMA of %K
+        Calculate Slow Stochastic Oscillator to match Deriv platform.
+        Fast %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100
+        Slow %K = 3-period SMA of Fast %K
+        %D = 3-period SMA of Slow %K
         """
-        # Calculate %K (Fast Stochastic)
+        # Calculate Fast %K
         lowest_low = low.rolling(window=k_period).min()
         highest_high = high.rolling(window=k_period).max()
         
-        # %K formula
-        k_values = []
+        # Fast %K formula
+        fast_k_values = []
         for i in range(len(close)):
             if i < k_period - 1:
-                k_values.append(0)
+                fast_k_values.append(0)
                 continue
             
             ll = lowest_low.iloc[i]
@@ -162,21 +163,24 @@ class TechnicalIndicators:
             else:
                 k = ((c - ll) / (hh - ll)) * 100
             
-            k_values.append(k)
+            fast_k_values.append(k)
         
-        # Convert to Series for SMA calculation
-        k_series = pd.Series(k_values, index=close.index)
+        # Convert to Series
+        fast_k_series = pd.Series(fast_k_values, index=close.index)
         
-        # Calculate %D (3-period SMA of %K)
-        d_series = k_series.rolling(window=d_period).mean()
+        # Slow %K = SMA of Fast %K (this is what Deriv uses)
+        slow_k_series = fast_k_series.rolling(window=smooth).mean()
+        
+        # %D = SMA of Slow %K
+        d_series = slow_k_series.rolling(window=d_period).mean()
         
         # Get the last values
-        stoch_k = k_series.iloc[-1]
+        stoch_k = slow_k_series.iloc[-1]
         stoch_d = d_series.iloc[-1]
         
         logger.debug(f"Stochastic - Lowest Low: {lowest_low.iloc[-1]:.5f}, Highest High: {highest_high.iloc[-1]:.5f}")
         logger.debug(f"Stochastic - Current Close: {close.iloc[-1]:.5f}")
-        logger.debug(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
+        logger.debug(f"Stochastic - Fast %K: {fast_k_series.iloc[-1]:.2f}, Slow %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
         return stoch_k, stoch_d
     
@@ -305,13 +309,14 @@ class TechnicalIndicators:
         if abs(rsi - rsi_ta) > 0.1:
             logger.warning(f"RSI mismatch: Custom={rsi:.2f}, TA Library={rsi_ta:.2f}")
         
-        # Stochastic Oscillator (using custom calculation to match Deriv platform)
+        # Stochastic Oscillator (using custom Slow Stochastic to match Deriv platform)
         stoch_k, stoch_d = self._calculate_stochastic(
             df['high'], 
             df['low'], 
             df['close'], 
             self.stochastic_k,
-            self.stochastic_d
+            self.stochastic_d,
+            self.stochastic_smooth
         )
         
         # Log Stochastic calculation details
