@@ -247,33 +247,17 @@ class HybridAdaptiveStrategy:
         
         # Log market mode and indicators
         logger.info(f"=== SIGNAL ANALYSIS ===")
-        logger.info(f"MARKET MODE: {market_mode.value} (ADX={ind_m5.adx:.1f}, +DI={ind_m5.plus_di:.1f}, -DI={ind_m5.minus_di:.1f})")
-        logger.info(f"M1: close={ind_m1.close:.2f}, RSI={ind_m1.rsi:.2f}, Stoch_K={ind_m1.stoch_k:.1f}")
+        logger.info(f"MARKET MODE: {market_mode.value} (ADX={ind_m5.adx:.2f}, +DI={ind_m5.plus_di:.2f}, -DI={ind_m5.minus_di:.2f})")
+        logger.info(f"M1: close={ind_m1.close:.2f}, RSI={ind_m1.rsi:.2f}, Stoch_K={ind_m1.stoch_k:.2f}")
         logger.info(f"M5: close={ind_m5.close:.2f}, RSI={ind_m5.rsi:.2f}, EMA50={ind_m5.ema_50:.2f}, BB_Width={ind_m5.bb_width:.4f}, Squeeze={ind_m5.bb_squeeze}")
         logger.info(f"M15: close={ind_m15.close:.2f}, EMA100={ind_m15.ema_100:.2f}, trend_up={ind_m15.trend_up}, trend_down={ind_m15.trend_down}")
         
-        # Check for Bollinger Band squeeze (low volatility) - avoid trading unless breakout detected
+        # Check for extreme Bollinger Band squeeze (very low volatility)
+        # Note: BB squeeze is now detected in indicators.py when width < 50% of average (relaxed from 75%)
         if ind_m5.bb_squeeze:
-            # Check for breakout: price breaking out of BB with volume/momentum
-            bb_breakout_up = ind_m5.close > ind_m5.bb_upper and ind_m5.rsi > 55
-            bb_breakout_down = ind_m5.close < ind_m5.bb_lower and ind_m5.rsi < 45
-            
-            if not (bb_breakout_up or bb_breakout_down):
-                logger.info("BB SQUEEZE detected - low volatility, avoiding trades")
-                return TradeSignal(
-                    signal=Signal.NONE,
-                    confidence=0,
-                    timestamp=datetime.now(pytz.UTC),
-                    price=ind_m1.close,
-                    indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                    confluence_factors=[f"BB Squeeze (low volatility) - waiting for breakout"],
-                    m1_confirmed=False,
-                    m5_confirmed=False,
-                    m15_confirmed=False,
-                    market_mode=market_mode.value
-                )
-            else:
-                logger.info(f"BB BREAKOUT detected during squeeze - proceeding with analysis")
+            logger.info(f"BB SQUEEZE detected (width={ind_m5.bb_width:.4f}) - reducing confidence by 10%")
+            # Don't block trades entirely, just reduce confidence
+            # The squeeze will be factored into the confidence calculation
         
         # Generate signals based on market mode
         if market_mode == MarketMode.TRENDING_UP:
@@ -294,7 +278,7 @@ class HybridAdaptiveStrategy:
                 timestamp=datetime.now(pytz.UTC),
                 price=ind_m1.close,
                 indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=[f"Market uncertain (ADX={ind_m5.adx:.1f}) - waiting"],
+                confluence_factors=[f"Market uncertain (ADX={ind_m5.adx:.2f}) - waiting"],
                 m1_confirmed=False,
                 m5_confirmed=False,
                 m15_confirmed=False,
@@ -413,10 +397,10 @@ class HybridAdaptiveStrategy:
         
         # ADX Slope - trend strength momentum
         if ind_m5.adx_rising:
-            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.1f}) - trend strengthening")
+            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.2f}) - trend strengthening")
             confidence += 10
         elif ind_m5.adx_falling:
-            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.1f}) - trend weakening")
+            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.2f}) - trend weakening")
             confidence -= 10  # Penalty for weakening trend
         
         # MACD momentum confirmation on M5
@@ -458,19 +442,19 @@ class HybridAdaptiveStrategy:
         
         # M1 ADX: Check if pullback is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
-            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - pullback weak, ready to resume trend")
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - pullback weak, ready to resume trend")
             confidence += 10
         elif ind_m1.adx_falling:
-            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.1f}) - pullback exhausting")
+            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.2f}) - pullback exhausting")
             confidence += 8
         elif ind_m1.adx > 25:
-            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.1f}) - pullback has momentum, caution")
+            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.2f}) - pullback has momentum, caution")
             confidence -= 5
         
         # M1: Entry trigger
         # Stochastic turning up
         if ind_m1.stoch_k > ind_m1.stoch_d and ind_m1.stoch_k < 50:
-            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.1f})")
+            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
             m1_confirmed = True
         
@@ -551,10 +535,10 @@ class HybridAdaptiveStrategy:
         
         # ADX Slope - trend strength momentum
         if ind_m5.adx_rising:
-            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.1f}) - trend strengthening")
+            confluence_factors.append(f"M5: ADX rising (slope={ind_m5.adx_slope:.2f}) - trend strengthening")
             confidence += 10
         elif ind_m5.adx_falling:
-            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.1f}) - trend weakening")
+            confluence_factors.append(f"M5: ADX falling (slope={ind_m5.adx_slope:.2f}) - trend weakening")
             confidence -= 10  # Penalty for weakening trend
         
         # MACD momentum confirmation on M5
@@ -596,19 +580,19 @@ class HybridAdaptiveStrategy:
         
         # M1 ADX: Check if rally is losing momentum (ADX falling on M1)
         if ind_m1.adx < 20:
-            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - rally weak, ready to resume trend")
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - rally weak, ready to resume trend")
             confidence += 10
         elif ind_m1.adx_falling:
-            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.1f}) - rally exhausting")
+            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.2f}) - rally exhausting")
             confidence += 8
         elif ind_m1.adx > 25:
-            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.1f}) - rally has momentum, caution")
+            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.2f}) - rally has momentum, caution")
             confidence -= 5
         
         # M1: Entry trigger
         # Stochastic turning down
         if ind_m1.stoch_k < ind_m1.stoch_d and ind_m1.stoch_k > 50:
-            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.1f})")
+            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
             m1_confirmed = True
         
@@ -656,7 +640,7 @@ class HybridAdaptiveStrategy:
         
         # M15: No strong trend bias needed in ranging
         if ind_m15.is_ranging:
-            confluence_factors.append(f"M15: Confirmed ranging (ADX={ind_m15.adx:.1f})")
+            confluence_factors.append(f"M15: Confirmed ranging (ADX={ind_m15.adx:.2f})")
             confidence += 10
             m15_confirmed = True
         
@@ -724,10 +708,10 @@ class HybridAdaptiveStrategy:
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
         if ind_m1.adx < 20:
-            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - ranging confirmed on M1")
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - ranging confirmed on M1")
             confidence += 10
         elif ind_m1.adx < 25:
-            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.1f}) - acceptable for mean reversion")
+            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.2f}) - acceptable for mean reversion")
             confidence += 5
         
         if divergence.get('bullish_divergence'):
@@ -736,7 +720,7 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger
         if ind_m1.stoch_oversold and ind_m1.stoch_k > ind_m1.stoch_d:
-            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.1f})")
+            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
             m1_confirmed = True
         
@@ -783,7 +767,7 @@ class HybridAdaptiveStrategy:
         
         # M15: No strong trend bias needed in ranging
         if ind_m15.is_ranging:
-            confluence_factors.append(f"M15: Confirmed ranging (ADX={ind_m15.adx:.1f})")
+            confluence_factors.append(f"M15: Confirmed ranging (ADX={ind_m15.adx:.2f})")
             confidence += 10
             m15_confirmed = True
         
@@ -851,10 +835,10 @@ class HybridAdaptiveStrategy:
         
         # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
         if ind_m1.adx < 20:
-            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - ranging confirmed on M1")
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - ranging confirmed on M1")
             confidence += 10
         elif ind_m1.adx < 25:
-            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.1f}) - acceptable for mean reversion")
+            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.2f}) - acceptable for mean reversion")
             confidence += 5
         
         if divergence.get('bearish_divergence'):
@@ -863,7 +847,7 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger
         if ind_m1.stoch_overbought and ind_m1.stoch_k < ind_m1.stoch_d:
-            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.1f})")
+            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
             m1_confirmed = True
         

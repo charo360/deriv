@@ -309,7 +309,7 @@ class TechnicalIndicators:
         # Calculate average BB width over last 20 periods to detect squeeze
         bb_width_series = bb.bollinger_wband()
         avg_bb_width = bb_width_series.iloc[-20:].mean()
-        bb_squeeze = bb_width < (avg_bb_width * 0.75)  # Squeeze when width is 25% below average
+        bb_squeeze = bb_width < (avg_bb_width * 0.50)  # Squeeze when width is 50% below average (relaxed)
         
         # RSI - Using Wilder's smoothing method (custom implementation)
         rsi = self._calculate_wilder_rsi(df['close'], self.rsi_period)
