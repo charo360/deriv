@@ -136,6 +136,50 @@ class TechnicalIndicators:
         
         return rsi
     
+    def _calculate_stochastic(self, high: pd.Series, low: pd.Series, close: pd.Series, k_period: int = 14, d_period: int = 3) -> tuple:
+        """
+        Calculate Stochastic Oscillator %K and %D using standard formula.
+        %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100
+        %D = 3-period SMA of %K
+        """
+        # Calculate %K (Fast Stochastic)
+        lowest_low = low.rolling(window=k_period).min()
+        highest_high = high.rolling(window=k_period).max()
+        
+        # %K formula
+        k_values = []
+        for i in range(len(close)):
+            if i < k_period - 1:
+                k_values.append(0)
+                continue
+            
+            ll = lowest_low.iloc[i]
+            hh = highest_high.iloc[i]
+            c = close.iloc[i]
+            
+            if hh - ll == 0:
+                k = 50.0  # Avoid division by zero
+            else:
+                k = ((c - ll) / (hh - ll)) * 100
+            
+            k_values.append(k)
+        
+        # Convert to Series for SMA calculation
+        k_series = pd.Series(k_values, index=close.index)
+        
+        # Calculate %D (3-period SMA of %K)
+        d_series = k_series.rolling(window=d_period).mean()
+        
+        # Get the last values
+        stoch_k = k_series.iloc[-1]
+        stoch_d = d_series.iloc[-1]
+        
+        logger.debug(f"Stochastic - Lowest Low: {lowest_low.iloc[-1]:.5f}, Highest High: {highest_high.iloc[-1]:.5f}")
+        logger.debug(f"Stochastic - Current Close: {close.iloc[-1]:.5f}")
+        logger.debug(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
+        
+        return stoch_k, stoch_d
+    
     def _calculate_wilder_adx(self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> tuple:
         """
         Calculate ADX, +DI, -DI using Wilder's smoothing method.
@@ -261,22 +305,20 @@ class TechnicalIndicators:
         if abs(rsi - rsi_ta) > 0.1:
             logger.warning(f"RSI mismatch: Custom={rsi:.2f}, TA Library={rsi_ta:.2f}")
         
-        # Stochastic Oscillator
-        stoch = ta.momentum.StochasticOscillator(
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            window=self.stochastic_k,
-            smooth_window=self.stochastic_smooth
+        # Stochastic Oscillator (using custom calculation to match Deriv platform)
+        stoch_k, stoch_d = self._calculate_stochastic(
+            df['high'], 
+            df['low'], 
+            df['close'], 
+            self.stochastic_k,
+            self.stochastic_d
         )
-        stoch_k = stoch.stoch().iloc[-1]
-        stoch_d = stoch.stoch_signal().iloc[-1]
         
         # Log Stochastic calculation details
         logger.debug(f"Stochastic Calculation - Last 5 High: {df['high'].tail(5).tolist()}")
         logger.debug(f"Stochastic Calculation - Last 5 Low: {df['low'].tail(5).tolist()}")
         logger.debug(f"Stochastic Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
-        logger.info(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
+        logger.info(f"Stochastic (Custom) - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
         # EMA 200
         ema = ta.trend.EMAIndicator(
