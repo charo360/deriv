@@ -701,6 +701,47 @@ class HybridAdaptiveStrategy:
         if ind_m1.macd_bullish or ind_m1.macd_histogram > ind_m5.macd_histogram:
             confluence_factors.append(f"M1: MACD momentum turning bullish")
             confidence += 10
+
+        if market_mode in (MarketMode.RANGING, MarketMode.UNCERTAIN):
+            if ind_m15.trend_up:
+                confluence_factors.append("M15: Up bias supports RISE")
+                confidence += 10
+                m15_confirmed = True
+            elif ind_m15.trend_down:
+                # Tiered approach for counter-bias CALL: allow high-quality mean-reversion setups
+                bb_percent_bias = ind_m5.bb_percent
+                has_reversal_hint = bool(divergence.get('bullish_divergence')) or patterns.get('hammer') or patterns.get('engulfing_bullish')
+                has_price_confirm = patterns.get('bullish_close') or patterns.get('break_prev_high')
+                
+                # Tier 1: Very strong mean-reversion (extreme oversold with reversal signal)
+                tier1_valid = (ind_m1.rsi < 30 and bb_percent_bias <= 0.20 and has_reversal_hint)
+                
+                # Tier 2: Strong mean-reversion (high oversold with full confirmation)
+                tier2_valid = (ind_m1.rsi < 35 and bb_percent_bias <= 0.15 and ind_m1.stoch_oversold and has_price_confirm)
+                
+                if not (tier1_valid or tier2_valid):
+                    confluence_factors.append(
+                        f"BLOCKED: M15 down-bias - need strong mean-reversion (RSI={ind_m1.rsi:.1f}, BB%={bb_percent_bias:.2f})"
+                    )
+                    return TradeSignal(
+                        signal=Signal.NONE,
+                        confidence=0,
+                        timestamp=datetime.now(pytz.UTC),
+                        price=ind_m1.close,
+                        indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                        confluence_factors=confluence_factors,
+                        m1_confirmed=False,
+                        m5_confirmed=False,
+                        m15_confirmed=False,
+                        market_mode=market_mode.value
+                    )
+                else:
+                    if tier1_valid:
+                        confluence_factors.append("M15 down-bias: Tier-1 mean-reversion (extreme oversold + reversal)")
+                        confidence += 5
+                    else:
+                        confluence_factors.append("M15 down-bias: Tier-2 mean-reversion (strong oversold + confirmation)")
+                        confidence += 3
         
         # BALANCED: M1 RSI oversold with graduated confidence (< 40)
         if ind_m1.rsi >= 40:
@@ -761,9 +802,12 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger
         if ind_m1.stoch_oversold and ind_m1.stoch_k > ind_m1.stoch_d:
-            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
-            confidence += 15
-            m1_confirmed = True
+            if patterns.get('bullish_close') or patterns.get('break_prev_high'):
+                confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
+                confidence += 15
+                m1_confirmed = True
+            else:
+                confluence_factors.append(f"M1: Stoch bullish cross ({ind_m1.stoch_k:.2f}) - waiting price confirmation")
         
         if patterns.get('hammer') or patterns.get('engulfing_bullish'):
             pattern_name = 'Hammer' if patterns.get('hammer') else 'Bullish engulfing'
@@ -816,6 +860,47 @@ class HybridAdaptiveStrategy:
         if ind_m1.macd_bearish or ind_m1.macd_histogram < ind_m5.macd_histogram:
             confluence_factors.append(f"M1: MACD momentum turning bearish")
             confidence += 10
+
+        if market_mode in (MarketMode.RANGING, MarketMode.UNCERTAIN):
+            if ind_m15.trend_down:
+                confluence_factors.append("M15: Down bias supports FALL")
+                confidence += 10
+                m15_confirmed = True
+            elif ind_m15.trend_up:
+                # Tiered approach for counter-bias PUT: allow high-quality mean-reversion setups
+                bb_percent_bias = ind_m5.bb_percent
+                has_reversal_hint = bool(divergence.get('bearish_divergence')) or patterns.get('shooting_star') or patterns.get('engulfing_bearish')
+                has_price_confirm = patterns.get('bearish_close') or patterns.get('break_prev_low')
+                
+                # Tier 1: Very strong mean-reversion (extreme overbought with reversal signal)
+                tier1_valid = (ind_m1.rsi > 70 and bb_percent_bias >= 0.80 and has_reversal_hint)
+                
+                # Tier 2: Strong mean-reversion (high overbought with full confirmation)
+                tier2_valid = (ind_m1.rsi > 65 and bb_percent_bias >= 0.85 and ind_m1.stoch_overbought and has_price_confirm)
+                
+                if not (tier1_valid or tier2_valid):
+                    confluence_factors.append(
+                        f"BLOCKED: M15 up-bias - need strong mean-reversion (RSI={ind_m1.rsi:.1f}, BB%={bb_percent_bias:.2f})"
+                    )
+                    return TradeSignal(
+                        signal=Signal.NONE,
+                        confidence=0,
+                        timestamp=datetime.now(pytz.UTC),
+                        price=ind_m1.close,
+                        indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                        confluence_factors=confluence_factors,
+                        m1_confirmed=False,
+                        m5_confirmed=False,
+                        m15_confirmed=False,
+                        market_mode=market_mode.value
+                    )
+                else:
+                    if tier1_valid:
+                        confluence_factors.append("M15 up-bias: Tier-1 mean-reversion (extreme overbought + reversal)")
+                        confidence += 5
+                    else:
+                        confluence_factors.append("M15 up-bias: Tier-2 mean-reversion (strong overbought + confirmation)")
+                        confidence += 3
         
         # BALANCED: M1 RSI overbought with graduated confidence (> 60)
         if ind_m1.rsi <= 60:
@@ -876,9 +961,12 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger
         if ind_m1.stoch_overbought and ind_m1.stoch_k < ind_m1.stoch_d:
-            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
-            confidence += 15
-            m1_confirmed = True
+            if patterns.get('bearish_close') or patterns.get('break_prev_low'):
+                confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
+                confidence += 15
+                m1_confirmed = True
+            else:
+                confluence_factors.append(f"M1: Stoch bearish cross ({ind_m1.stoch_k:.2f}) - waiting price confirmation")
         
         if patterns.get('shooting_star') or patterns.get('engulfing_bearish'):
             pattern_name = 'Shooting star' if patterns.get('shooting_star') else 'Bearish engulfing'
