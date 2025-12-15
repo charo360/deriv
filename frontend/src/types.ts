@@ -60,7 +60,7 @@ export interface IndicatorSet {
   stoch_k: number;
   stoch_d: number;
   ema_50: number;
-  ema_200: number;
+  ema_100: number;
   adx: number;
   plus_di: number;
   minus_di: number;

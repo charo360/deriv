@@ -328,21 +328,21 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-400 mb-1">EMA 200</p>
+              <p className="text-xs text-gray-400 mb-1">EMA 100</p>
               <p className="text-lg font-bold text-purple-400">
-                {signal.indicators.m5.ema_200.toFixed(4)}
+                {signal.indicators.m5.ema_100.toFixed(4)}
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {signal.price > signal.indicators.m5.ema_200 ? 'Above' : 'Below'}
+                {signal.price > signal.indicators.m5.ema_100 ? 'Above' : 'Below'}
               </p>
             </div>
           </div>
           <div className="mt-2 pt-2 border-t border-deriv-light/30 text-xs text-gray-400">
             <p>
               Current Price: {signal.price.toFixed(4)} - 
-              {signal.price > signal.indicators.m5.ema_50 && signal.price > signal.indicators.m5.ema_200
+              {signal.price > signal.indicators.m5.ema_50 && signal.price > signal.indicators.m5.ema_100
                 ? ' Above both EMAs (Bullish trend)'
-                : signal.price < signal.indicators.m5.ema_50 && signal.price < signal.indicators.m5.ema_200
+                : signal.price < signal.indicators.m5.ema_50 && signal.price < signal.indicators.m5.ema_100
                 ? ' Below both EMAs (Bearish trend)'
                 : ' Between EMAs (Transitioning)'
               }

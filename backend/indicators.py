@@ -35,7 +35,7 @@ class IndicatorValues:
     stoch_d: float
     
     # EMA
-    ema_200: float
+    ema_100: float
     ema_50: float
     
     # ADX - Trend Strength
@@ -179,6 +179,26 @@ class TechnicalIndicators:
         logger.debug(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
         return stoch_k, stoch_d
+    
+    def _calculate_ema(self, close: pd.Series, period: int) -> float:
+        """
+        Calculate EMA using standard formula to match Deriv platform.
+        EMA = (Close - Previous EMA) * Multiplier + Previous EMA
+        Multiplier = 2 / (Period + 1)
+        """
+        multiplier = 2 / (period + 1)
+        
+        # Start with SMA for the first EMA value
+        sma = close.iloc[:period].mean()
+        ema_values = [sma]
+        
+        # Calculate EMA for remaining values
+        for i in range(period, len(close)):
+            ema = (close.iloc[i] - ema_values[-1]) * multiplier + ema_values[-1]
+            ema_values.append(ema)
+        
+        # Return the last EMA value
+        return ema_values[-1]
     
     def _calculate_wilder_adx(self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> tuple:
         """
@@ -325,23 +345,15 @@ class TechnicalIndicators:
         logger.debug(f"Stochastic Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
         logger.info(f"Stochastic (Custom) - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
-        # EMA 200
-        ema = ta.trend.EMAIndicator(
-            close=df['close'],
-            window=self.ema_period
-        )
-        ema_200 = ema.ema_indicator().iloc[-1]
+        # EMA 100 (using custom calculation to match Deriv platform)
+        ema_100 = self._calculate_ema(df['close'], self.ema_period)
         
-        # EMA 50 for trend direction
-        ema_50_ind = ta.trend.EMAIndicator(
-            close=df['close'],
-            window=50
-        )
-        ema_50 = ema_50_ind.ema_indicator().iloc[-1]
+        # EMA 50 for trend direction (using custom calculation to match Deriv platform)
+        ema_50 = self._calculate_ema(df['close'], 50)
         
         # Log EMA calculation details
         logger.debug(f"EMA Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
-        logger.info(f"EMA - EMA50: {ema_50:.4f}, EMA200: {ema_200:.4f}")
+        logger.info(f"EMA (Custom) - EMA50: {ema_50:.4f}, EMA100: {ema_100:.4f}")
         
         # ADX - Average Directional Index for trend strength (using custom Wilder's method)
         adx, plus_di, minus_di = self._calculate_wilder_adx(
@@ -394,8 +406,8 @@ class TechnicalIndicators:
         rsi_overbought = rsi >= self.rsi_overbought
         stoch_oversold = stoch_k <= self.stochastic_oversold
         stoch_overbought = stoch_k >= self.stochastic_overbought
-        above_ema = close > ema_200
-        below_ema = close < ema_200
+        above_ema = close > ema_100
+        below_ema = close < ema_100
         
         # Trend signals
         is_trending = adx > 25
@@ -416,7 +428,7 @@ class TechnicalIndicators:
             rsi=rsi,
             stoch_k=stoch_k,
             stoch_d=stoch_d,
-            ema_200=ema_200,
+            ema_100=ema_100,
             ema_50=ema_50,
             adx=adx,
             plus_di=plus_di,

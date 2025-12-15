@@ -42,7 +42,7 @@ class TradingConfig(BaseModel):
     stochastic_smooth: int = 3
     stochastic_oversold: float = 20.0
     stochastic_overbought: float = 80.0
-    ema_period: int = 200
+    ema_period: int = 100
     
     # Timeframes (in seconds)
     timeframe_trigger: int = 60      # M1
