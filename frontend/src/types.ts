@@ -63,6 +63,9 @@ export interface IndicatorSet {
   adx: number;
   plus_di: number;
   minus_di: number;
+  macd: number;
+  macd_signal: number;
+  macd_histogram: number;
 }
 
 export interface Trade {

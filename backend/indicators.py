@@ -370,6 +370,10 @@ class TechnicalIndicators:
         macd_signal = macd_indicator.macd_signal().iloc[-1]
         macd_histogram = macd_indicator.macd_diff().iloc[-1]
         
+        # Log MACD calculation details
+        logger.debug(f"MACD Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
+        logger.info(f"MACD (Fast=12, Slow=26, Signal=9) - MACD: {macd:.5f}, Signal: {macd_signal:.5f}, Histogram: {macd_histogram:.5f}")
+        
         # MACD momentum signals
         macd_bullish = macd > macd_signal and macd_histogram > 0
         macd_bearish = macd < macd_signal and macd_histogram < 0

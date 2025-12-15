@@ -268,6 +268,51 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
         </div>
       )}
 
+      {/* MACD Display - M1 */}
+      {signal.indicators && signal.indicators.m1 && (
+        <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
+          <p className="text-xs text-gray-400 mb-2">MACD (M1) - Fast 12, Slow 26, Signal 9</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">MACD Line</p>
+              <p className={`text-lg font-bold ${
+                signal.indicators.m1.macd > 0 ? 'text-deriv-green' : 'text-deriv-red'
+              }`}>
+                {signal.indicators.m1.macd.toFixed(2)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">Signal Line</p>
+              <p className={`text-lg font-bold ${
+                signal.indicators.m1.macd_signal > 0 ? 'text-deriv-green' : 'text-deriv-red'
+              }`}>
+                {signal.indicators.m1.macd_signal.toFixed(2)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">Histogram</p>
+              <p className={`text-lg font-bold ${
+                signal.indicators.m1.macd_histogram > 0 ? 'text-deriv-green' : 'text-deriv-red'
+              }`}>
+                {signal.indicators.m1.macd_histogram.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-deriv-light/30 text-xs text-gray-400">
+            <p>
+              {signal.indicators.m1.macd > signal.indicators.m1.macd_signal 
+                ? signal.indicators.m1.macd_histogram > 0
+                  ? '✓ Bullish momentum - MACD above signal'
+                  : 'Bullish crossover starting'
+                : signal.indicators.m1.macd_histogram < 0
+                ? '⚠ Bearish momentum - MACD below signal'
+                : 'Bearish crossover starting'
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Pending Contract */}
       {pendingContract && (
         <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-3 mb-4">
