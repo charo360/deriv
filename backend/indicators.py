@@ -138,20 +138,19 @@ class TechnicalIndicators:
     
     def _calculate_stochastic(self, high: pd.Series, low: pd.Series, close: pd.Series, k_period: int = 14, d_period: int = 3, smooth: int = 3) -> tuple:
         """
-        Calculate Slow Stochastic Oscillator to match Deriv platform.
-        Fast %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100
-        Slow %K = 3-period SMA of Fast %K
-        %D = 3-period SMA of Slow %K
+        Calculate Stochastic Oscillator to match Deriv platform.
+        %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100 (raw Fast %K)
+        %D = 3-period SMA of %K
         """
-        # Calculate Fast %K
+        # Calculate %K (Fast Stochastic)
         lowest_low = low.rolling(window=k_period).min()
         highest_high = high.rolling(window=k_period).max()
         
-        # Fast %K formula
-        fast_k_values = []
+        # %K formula
+        k_values = []
         for i in range(len(close)):
             if i < k_period - 1:
-                fast_k_values.append(0)
+                k_values.append(0)
                 continue
             
             ll = lowest_low.iloc[i]
@@ -163,24 +162,21 @@ class TechnicalIndicators:
             else:
                 k = ((c - ll) / (hh - ll)) * 100
             
-            fast_k_values.append(k)
+            k_values.append(k)
         
         # Convert to Series
-        fast_k_series = pd.Series(fast_k_values, index=close.index)
+        k_series = pd.Series(k_values, index=close.index)
         
-        # Slow %K = SMA of Fast %K (this is what Deriv uses)
-        slow_k_series = fast_k_series.rolling(window=smooth).mean()
-        
-        # %D = SMA of Slow %K
-        d_series = slow_k_series.rolling(window=d_period).mean()
+        # %D = SMA of %K (no additional smoothing on %K)
+        d_series = k_series.rolling(window=d_period).mean()
         
         # Get the last values
-        stoch_k = slow_k_series.iloc[-1]
+        stoch_k = k_series.iloc[-1]
         stoch_d = d_series.iloc[-1]
         
         logger.debug(f"Stochastic - Lowest Low: {lowest_low.iloc[-1]:.5f}, Highest High: {highest_high.iloc[-1]:.5f}")
         logger.debug(f"Stochastic - Current Close: {close.iloc[-1]:.5f}")
-        logger.debug(f"Stochastic - Fast %K: {fast_k_series.iloc[-1]:.2f}, Slow %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
+        logger.debug(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
         return stoch_k, stoch_d
     
