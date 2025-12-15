@@ -370,9 +370,10 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # BALANCED: M1 RSI oversold with graduated confidence (< 40)
-        if ind_m1.rsi >= 40:
-            confluence_factors.append(f"BLOCKED: M1 RSI not oversold ({ind_m1.rsi:.2f}) - need RSI < 40 for RISE")
+        # BALANCED: M1 RSI oversold with graduated confidence
+        # Allow 40-45 range to catch entries when RSI bounces back as reversal begins
+        if ind_m1.rsi > 45:
+            confluence_factors.append(f"BLOCKED: M1 RSI too high ({ind_m1.rsi:.2f}) - need RSI < 45 for RISE")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -393,9 +394,12 @@ class HybridAdaptiveStrategy:
         elif ind_m1.rsi < 35:
             confluence_factors.append(f"M1: RSI oversold ({ind_m1.rsi:.2f}) - reversal zone")
             confidence += 30
-        else:  # 35-40
+        elif ind_m1.rsi < 40:
             confluence_factors.append(f"M1: RSI moderate oversold ({ind_m1.rsi:.2f}) - early reversal")
             confidence += 20
+        else:  # 40-45 - RSI bouncing back, reversal starting
+            confluence_factors.append(f"M1: RSI bounce ({ind_m1.rsi:.2f}) - reversal in progress")
+            confidence += 15
         m1_confirmed = True
         
         # M15: Confirm uptrend
@@ -512,9 +516,10 @@ class HybridAdaptiveStrategy:
         m5_confirmed = False
         m1_confirmed = False
         
-        # BALANCED: M1 RSI overbought with graduated confidence (> 60)
-        if ind_m1.rsi <= 60:
-            confluence_factors.append(f"BLOCKED: M1 RSI not overbought ({ind_m1.rsi:.2f}) - need RSI > 60 for FALL")
+        # BALANCED: M1 RSI overbought with graduated confidence
+        # Allow 55-60 range to catch entries when RSI pulls back as reversal begins
+        if ind_m1.rsi < 55:
+            confluence_factors.append(f"BLOCKED: M1 RSI too low ({ind_m1.rsi:.2f}) - need RSI > 55 for FALL")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=0,
@@ -535,9 +540,12 @@ class HybridAdaptiveStrategy:
         elif ind_m1.rsi > 65:
             confluence_factors.append(f"M1: RSI overbought ({ind_m1.rsi:.2f}) - reversal zone")
             confidence += 30
-        else:  # 60-65
+        elif ind_m1.rsi > 60:
             confluence_factors.append(f"M1: RSI moderate overbought ({ind_m1.rsi:.2f}) - early reversal")
             confidence += 20
+        else:  # 55-60 - RSI pulling back, reversal starting
+            confluence_factors.append(f"M1: RSI pullback ({ind_m1.rsi:.2f}) - reversal in progress")
+            confidence += 15
         m1_confirmed = True
         
         # M15: Confirm downtrend
