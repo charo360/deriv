@@ -175,12 +175,15 @@ export function ControlPanel({
                   onChange={(e) => setSymbol(e.target.value)}
                   className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-blue-500"
                 >
-                  <option value="R_10">Volatility 10 Index (1s)</option>
-                  <option value="R_25">Volatility 25 Index (2s)</option>
-                  <option value="R_50">Volatility 50 Index (1s)</option>
-                  <option value="R_75">Volatility 75 Index (1s)</option>
-                  <option value="R_100">Volatility 100 Index (2s)</option>
+                  <option value="R_10">Volatility 10 (1s) Index</option>
+                  <option value="R_25">Volatility 25 (1s) Index</option>
+                  <option value="R_50">Volatility 50 (1s) Index</option>
+                  <option value="R_75">Volatility 75 (1s) Index</option>
+                  <option value="R_100">Volatility 100 (1s) Index</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  All use 1-second tick frequency for optimal M1 candles
+                </p>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Contract Duration (seconds)</label>
