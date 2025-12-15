@@ -63,7 +63,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
       </div>
 
       {/* RSI Display - M1 (matches Deriv platform) */}
-      {signal.indicators && (
+      {signal.indicators && signal.indicators.m1 && signal.indicators.m5 && (
         <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
           <div className="flex items-center justify-between">
             <div>
