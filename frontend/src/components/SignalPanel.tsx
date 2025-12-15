@@ -235,30 +235,30 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             <div>
               <p className="text-xs text-gray-400 mb-1">M1 RSI (Deriv Platform)</p>
               <p className={`text-3xl font-bold ${
-                signal.indicators.m1.rsi < 35 ? 'text-deriv-green' :
-                signal.indicators.m1.rsi > 65 ? 'text-deriv-red' : 'text-yellow-500'
+                signal.indicators.m1.rsi < 40 ? 'text-deriv-green' :
+                signal.indicators.m1.rsi > 60 ? 'text-deriv-red' : 'text-yellow-500'
               }`}>
                 {signal.indicators.m1.rsi.toFixed(2)}
               </p>
             </div>
             <div className="text-right text-sm">
-              {signal.indicators.m1.rsi < 35 ? (
+              {signal.indicators.m1.rsi < 40 ? (
                 <div className="text-deriv-green">
                   <p className="font-semibold">OVERSOLD ✓</p>
-                  <p className="text-xs opacity-75">{(35 - signal.indicators.m1.rsi).toFixed(1)} below threshold</p>
+                  <p className="text-xs opacity-75">{(40 - signal.indicators.m1.rsi).toFixed(1)} below threshold</p>
                 </div>
-              ) : signal.indicators.m1.rsi > 65 ? (
+              ) : signal.indicators.m1.rsi > 60 ? (
                 <div className="text-deriv-red">
                   <p className="font-semibold">OVERBOUGHT ✓</p>
-                  <p className="text-xs opacity-75">{(signal.indicators.m1.rsi - 65).toFixed(1)} above threshold</p>
+                  <p className="text-xs opacity-75">{(signal.indicators.m1.rsi - 60).toFixed(1)} above threshold</p>
                 </div>
               ) : (
                 <div className="text-gray-400">
                   <p className="font-semibold">NEUTRAL</p>
                   <p className="text-xs">
                     {signal.indicators.m1.rsi < 50 
-                      ? `${(35 - signal.indicators.m1.rsi).toFixed(1)} to oversold`
-                      : `${(signal.indicators.m1.rsi - 65).toFixed(1)} to overbought`
+                      ? `${(40 - signal.indicators.m1.rsi).toFixed(1)} to oversold`
+                      : `${(signal.indicators.m1.rsi - 60).toFixed(1)} to overbought`
                     }
                   </p>
                 </div>
@@ -268,8 +268,8 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
           <div className="mt-2 pt-2 border-t border-deriv-light/30 text-xs text-gray-400">
             <span>M5 RSI (Strategy): </span>
             <span className={`font-medium ${
-              signal.indicators.m5.rsi < 35 ? 'text-deriv-green' :
-              signal.indicators.m5.rsi > 65 ? 'text-deriv-red' : 'text-gray-300'
+              signal.indicators.m5.rsi < 40 ? 'text-deriv-green' :
+              signal.indicators.m5.rsi > 60 ? 'text-deriv-red' : 'text-gray-300'
             }`}>{signal.indicators.m5.rsi.toFixed(2)}</span>
           </div>
         </div>
