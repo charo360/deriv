@@ -230,36 +230,36 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
         </div>
       )}
 
-      {/* Bollinger Bands Display - M5 */}
-      {signal.indicators && signal.indicators.m5 && (
+      {/* Bollinger Bands Display - M1 */}
+      {signal.indicators && signal.indicators.m1 && (
         <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
-          <p className="text-xs text-gray-400 mb-2">Bollinger Bands (M5) - Period 20, StdDev 2</p>
+          <p className="text-xs text-gray-400 mb-2">Bollinger Bands (M1) - Period 20, StdDev 2</p>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Upper</p>
               <p className="text-lg font-bold text-deriv-red">
-                {signal.indicators.m5.bb_upper.toFixed(4)}
+                {signal.indicators.m1.bb_upper.toFixed(4)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Middle (SMA)</p>
               <p className="text-lg font-bold text-gray-300">
-                {signal.indicators.m5.bb_middle.toFixed(4)}
+                {signal.indicators.m1.bb_middle.toFixed(4)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Lower</p>
               <p className="text-lg font-bold text-deriv-green">
-                {signal.indicators.m5.bb_lower.toFixed(4)}
+                {signal.indicators.m1.bb_lower.toFixed(4)}
               </p>
             </div>
           </div>
           <div className="mt-2 pt-2 border-t border-deriv-light/30 text-xs text-gray-400">
             <p>
               Current Price: {signal.price.toFixed(4)} - 
-              {signal.indicators.m5.close >= signal.indicators.m5.bb_upper 
+              {signal.indicators.m1.close >= signal.indicators.m1.bb_upper 
                 ? ' At/Above Upper Band'
-                : signal.indicators.m5.close <= signal.indicators.m5.bb_lower
+                : signal.indicators.m1.close <= signal.indicators.m1.bb_lower
                 ? ' At/Below Lower Band'
                 : ' Within Bands'
               }
