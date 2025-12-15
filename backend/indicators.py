@@ -282,6 +282,10 @@ class TechnicalIndicators:
         bb_percent = bb.bollinger_pband().iloc[-1]
         bb_width = bb.bollinger_wband().iloc[-1]  # Band width as percentage of middle band
         
+        # Log Bollinger Bands calculation details
+        logger.debug(f"Bollinger Bands - Last 5 Close: {df['close'].tail(5).tolist()}")
+        logger.info(f"Bollinger Bands (Period={self.bollinger_period}, StdDev={self.bollinger_std}) - Upper: {bb_upper:.5f}, Middle: {bb_middle:.5f}, Lower: {bb_lower:.5f}")
+        
         # Calculate average BB width over last 20 periods to detect squeeze
         bb_width_series = bb.bollinger_wband()
         avg_bb_width = bb_width_series.iloc[-20:].mean()
