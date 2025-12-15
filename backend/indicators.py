@@ -339,6 +339,10 @@ class TechnicalIndicators:
         )
         ema_50 = ema_50_ind.ema_indicator().iloc[-1]
         
+        # Log EMA calculation details
+        logger.debug(f"EMA Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
+        logger.info(f"EMA - EMA50: {ema_50:.4f}, EMA200: {ema_200:.4f}")
+        
         # ADX - Average Directional Index for trend strength (using custom Wilder's method)
         adx, plus_di, minus_di = self._calculate_wilder_adx(
             df['high'], 

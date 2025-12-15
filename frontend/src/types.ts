@@ -59,6 +59,7 @@ export interface IndicatorSet {
   rsi: number;
   stoch_k: number;
   stoch_d: number;
+  ema_50: number;
   ema_200: number;
   adx: number;
   plus_di: number;
