@@ -345,15 +345,23 @@ class TechnicalIndicators:
         logger.debug(f"Stochastic Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
         logger.info(f"Stochastic (Custom) - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
         
-        # EMA 100 (using custom calculation to match Deriv platform)
-        ema_100 = self._calculate_ema(df['close'], self.ema_period)
+        # EMA 100 (using ta library - standard EMA calculation)
+        ema_100_ind = ta.trend.EMAIndicator(
+            close=df['close'],
+            window=self.ema_period
+        )
+        ema_100 = ema_100_ind.ema_indicator().iloc[-1]
         
-        # EMA 50 for trend direction (using custom calculation to match Deriv platform)
-        ema_50 = self._calculate_ema(df['close'], 50)
+        # EMA 50 for trend direction (using ta library - standard EMA calculation)
+        ema_50_ind = ta.trend.EMAIndicator(
+            close=df['close'],
+            window=50
+        )
+        ema_50 = ema_50_ind.ema_indicator().iloc[-1]
         
         # Log EMA calculation details
         logger.debug(f"EMA Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
-        logger.info(f"EMA (Custom) - EMA50: {ema_50:.4f}, EMA100: {ema_100:.4f}")
+        logger.info(f"EMA - EMA50: {ema_50:.4f}, EMA100: {ema_100:.4f}")
         
         # ADX - Average Directional Index for trend strength (using custom Wilder's method)
         adx, plus_di, minus_di = self._calculate_wilder_adx(
