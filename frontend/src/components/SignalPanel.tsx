@@ -109,6 +109,41 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
         </div>
       )}
 
+      {/* ADX Display - Trend Strength (M5) */}
+      {signal.indicators && signal.indicators.m5 && (
+        <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
+          <p className="text-xs text-gray-400 mb-2">ADX - Trend Strength (M5)</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">ADX</p>
+              <p className={`text-2xl font-bold ${
+                signal.indicators.m5.adx > 25 ? 'text-deriv-green' :
+                signal.indicators.m5.adx < 20 ? 'text-yellow-500' : 'text-gray-300'
+              }`}>
+                {signal.indicators.m5.adx.toFixed(1)}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {signal.indicators.m5.adx > 25 ? 'Trending' : signal.indicators.m5.adx < 20 ? 'Ranging' : 'Neutral'}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">+DI</p>
+              <p className="text-2xl font-bold text-deriv-green">
+                {signal.indicators.m5.plus_di.toFixed(1)}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Bullish</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">-DI</p>
+              <p className="text-2xl font-bold text-deriv-red">
+                {signal.indicators.m5.minus_di.toFixed(1)}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Bearish</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pending Contract */}
       {pendingContract && (
         <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-3 mb-4">
