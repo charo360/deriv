@@ -250,7 +250,7 @@ class HybridAdaptiveStrategy:
         logger.info(f"MARKET MODE: {market_mode.value} (ADX={ind_m5.adx:.1f}, +DI={ind_m5.plus_di:.1f}, -DI={ind_m5.minus_di:.1f})")
         logger.info(f"M1: close={ind_m1.close:.2f}, RSI={ind_m1.rsi:.2f}, Stoch_K={ind_m1.stoch_k:.1f}")
         logger.info(f"M5: close={ind_m5.close:.2f}, RSI={ind_m5.rsi:.2f}, EMA50={ind_m5.ema_50:.2f}, BB_Width={ind_m5.bb_width:.4f}, Squeeze={ind_m5.bb_squeeze}")
-        logger.info(f"M15: close={ind_m15.close:.2f}, EMA200={ind_m15.ema_200:.2f}, trend_up={ind_m15.trend_up}, trend_down={ind_m15.trend_down}")
+        logger.info(f"M15: close={ind_m15.close:.2f}, EMA100={ind_m15.ema_100:.2f}, trend_up={ind_m15.trend_up}, trend_down={ind_m15.trend_down}")
         
         # Check for Bollinger Band squeeze (low volatility) - avoid trading unless breakout detected
         if ind_m5.bb_squeeze:
@@ -850,7 +850,7 @@ class HybridAdaptiveStrategy:
                 'stoch_k': round(ind_m1.stoch_k, 2),
                 'stoch_d': round(ind_m1.stoch_d, 2),
                 'ema_50': round(ind_m1.ema_50, 5),
-                'ema_200': round(ind_m1.ema_200, 5),
+                'ema_100': round(ind_m1.ema_100, 5),
                 'adx': round(ind_m1.adx, 2),
                 'plus_di': round(ind_m1.plus_di, 2),
                 'minus_di': round(ind_m1.minus_di, 2),
@@ -871,7 +871,7 @@ class HybridAdaptiveStrategy:
                 'stoch_k': round(ind_m5.stoch_k, 2),
                 'stoch_d': round(ind_m5.stoch_d, 2),
                 'ema_50': round(ind_m5.ema_50, 5),
-                'ema_200': round(ind_m5.ema_200, 5),
+                'ema_100': round(ind_m5.ema_100, 5),
                 'adx': round(ind_m5.adx, 2),
                 'plus_di': round(ind_m5.plus_di, 2),
                 'minus_di': round(ind_m5.minus_di, 2),
@@ -892,7 +892,7 @@ class HybridAdaptiveStrategy:
                 'stoch_k': round(ind_m15.stoch_k, 2),
                 'stoch_d': round(ind_m15.stoch_d, 2),
                 'ema_50': round(ind_m15.ema_50, 5),
-                'ema_200': round(ind_m15.ema_200, 5),
+                'ema_100': round(ind_m15.ema_100, 5),
                 'adx': round(ind_m15.adx, 2),
                 'plus_di': round(ind_m15.plus_di, 2),
                 'minus_di': round(ind_m15.minus_di, 2),
