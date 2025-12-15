@@ -443,6 +443,17 @@ class HybridAdaptiveStrategy:
         confidence += 30
         m1_confirmed = True
         
+        # M1 ADX: Check if pullback is losing momentum (ADX falling on M1)
+        if ind_m1.adx < 20:
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - pullback weak, ready to resume trend")
+            confidence += 10
+        elif ind_m1.adx_falling:
+            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.1f}) - pullback exhausting")
+            confidence += 8
+        elif ind_m1.adx > 25:
+            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.1f}) - pullback has momentum, caution")
+            confidence -= 5
+        
         # M1: Entry trigger
         # Stochastic turning up
         if ind_m1.stoch_k > ind_m1.stoch_d and ind_m1.stoch_k < 50:
@@ -557,6 +568,17 @@ class HybridAdaptiveStrategy:
         confidence += 30
         m1_confirmed = True
         
+        # M1 ADX: Check if rally is losing momentum (ADX falling on M1)
+        if ind_m1.adx < 20:
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - rally weak, ready to resume trend")
+            confidence += 10
+        elif ind_m1.adx_falling:
+            confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.1f}) - rally exhausting")
+            confidence += 8
+        elif ind_m1.adx > 25:
+            confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.1f}) - rally has momentum, caution")
+            confidence -= 5
+        
         # M1: Entry trigger
         # Stochastic turning down
         if ind_m1.stoch_k < ind_m1.stoch_d and ind_m1.stoch_k > 50:
@@ -656,6 +678,14 @@ class HybridAdaptiveStrategy:
         confluence_factors.append(f"M5: RSI oversold ({ind_m5.rsi:.1f}) - extreme reversal zone")
         confidence += 30
         m5_confirmed = True
+        
+        # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
+        if ind_m1.adx < 20:
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - ranging confirmed on M1")
+            confidence += 10
+        elif ind_m1.adx < 25:
+            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.1f}) - acceptable for mean reversion")
+            confidence += 5
         
         if divergence.get('bullish_divergence'):
             confluence_factors.append("M5: Bullish RSI divergence")
@@ -758,6 +788,14 @@ class HybridAdaptiveStrategy:
         confluence_factors.append(f"M5: RSI overbought ({ind_m5.rsi:.1f}) - extreme reversal zone")
         confidence += 30
         m5_confirmed = True
+        
+        # M1 ADX: Confirm ranging on M1 too (low ADX = better mean reversion)
+        if ind_m1.adx < 20:
+            confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.1f}) - ranging confirmed on M1")
+            confidence += 10
+        elif ind_m1.adx < 25:
+            confluence_factors.append(f"M1: ADX moderate ({ind_m1.adx:.1f}) - acceptable for mean reversion")
+            confidence += 5
         
         if divergence.get('bearish_divergence'):
             confluence_factors.append("M5: Bearish RSI divergence")

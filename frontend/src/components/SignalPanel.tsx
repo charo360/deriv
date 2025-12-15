@@ -144,6 +144,49 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
         </div>
       )}
 
+      {/* ADX Display - M1 Pullback Momentum */}
+      {signal.indicators && signal.indicators.m1 && (
+        <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
+          <p className="text-xs text-gray-400 mb-2">M1 ADX - Pullback Momentum</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">ADX</p>
+              <p className={`text-xl font-bold ${
+                signal.indicators.m1.adx < 20 ? 'text-deriv-green' :
+                signal.indicators.m1.adx > 25 ? 'text-deriv-red' : 'text-yellow-500'
+              }`}>
+                {signal.indicators.m1.adx.toFixed(2)}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {signal.indicators.m1.adx < 20 ? 'Weak' : signal.indicators.m1.adx > 25 ? 'Strong' : 'Moderate'}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">+DI</p>
+              <p className="text-xl font-bold text-deriv-green">
+                {signal.indicators.m1.plus_di.toFixed(2)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-1">-DI</p>
+              <p className="text-xl font-bold text-deriv-red">
+                {signal.indicators.m1.minus_di.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-deriv-light/30 text-xs text-gray-400">
+            <p>
+              {signal.indicators.m1.adx < 20 
+                ? '✓ Low M1 ADX = Pullback exhausting, good for entry'
+                : signal.indicators.m1.adx > 25
+                ? '⚠ High M1 ADX = Pullback has momentum, wait'
+                : 'Moderate M1 ADX = Acceptable entry conditions'
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Pending Contract */}
       {pendingContract && (
         <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-3 mb-4">
