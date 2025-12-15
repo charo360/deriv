@@ -35,6 +35,7 @@ class TradeRequest(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
+    symbol: Optional[str] = None
     initial_stake: Optional[float] = None
     risk_percent: Optional[float] = None
     max_martingale_steps: Optional[int] = None
@@ -229,6 +230,9 @@ async def get_statistics():
 @app.put("/api/settings")
 async def update_settings(settings: SettingsUpdate):
     """Update trading settings."""
+    if settings.symbol is not None:
+        trading_config.symbol = settings.symbol
+        logger.info(f"Symbol updated to: {settings.symbol}")
     if settings.initial_stake is not None:
         trading_config.initial_stake = settings.initial_stake
     if settings.risk_percent is not None:
@@ -237,6 +241,7 @@ async def update_settings(settings: SettingsUpdate):
         trading_config.max_martingale_steps = settings.max_martingale_steps
     if settings.trade_duration is not None:
         trading_config.trade_duration = settings.trade_duration
+        logger.info(f"Contract duration updated to: {settings.trade_duration}s")
     if settings.max_daily_profit_target is not None:
         trading_config.max_daily_profit_target = settings.max_daily_profit_target
     if settings.max_session_loss is not None:
@@ -249,6 +254,7 @@ async def update_settings(settings: SettingsUpdate):
         bot.risk_manager.max_martingale_steps = trading_config.max_martingale_steps
         bot.risk_manager.max_daily_profit_target = trading_config.max_daily_profit_target
         bot.risk_manager.max_session_loss = trading_config.max_session_loss
+        # Note: Symbol and duration changes require bot restart to take effect
     
     return {"success": True, "settings": settings.model_dump()}
 
