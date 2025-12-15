@@ -10,8 +10,18 @@ interface ControlPanelProps {
   onEnableTrading: () => void;
   onDisableTrading: () => void;
   onManualTrade: (direction: 'CALL' | 'PUT') => void;
-  onUpdateSettings: (settings: { max_daily_profit_target?: number; max_session_loss?: number }) => void;
-  currentSettings?: { max_daily_profit_target?: number; max_session_loss?: number };
+  onUpdateSettings: (settings: { 
+    max_daily_profit_target?: number; 
+    max_session_loss?: number;
+    trade_duration?: number;
+    symbol?: string;
+  }) => void;
+  currentSettings?: { 
+    max_daily_profit_target?: number; 
+    max_session_loss?: number;
+    trade_duration?: number;
+    symbol?: string;
+  };
 }
 
 export function ControlPanel({
@@ -31,6 +41,8 @@ export function ControlPanel({
   const [showSettings, setShowSettings] = useState(false);
   const [profitTarget, setProfitTarget] = useState(currentSettings?.max_daily_profit_target?.toString() || '200');
   const [sessionLoss, setSessionLoss] = useState(currentSettings?.max_session_loss?.toString() || '100');
+  const [contractDuration, setContractDuration] = useState(currentSettings?.trade_duration?.toString() || '300');
+  const [symbol, setSymbol] = useState(currentSettings?.symbol || 'R_75');
 
   const handleStart = () => {
     if (apiToken.trim()) {
@@ -151,11 +163,42 @@ export function ControlPanel({
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-deriv-light text-white rounded hover:bg-opacity-80 text-sm"
           >
             <Settings className="w-4 h-4" />
-            {showSettings ? 'Hide' : 'Show'} TP/SL Settings
+            {showSettings ? 'Hide' : 'Show'} Trading Settings
           </button>
 
           {showSettings && (
             <div className="mt-3 space-y-3">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Symbol</label>
+                <select
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value="R_10">Volatility 10 Index (1s)</option>
+                  <option value="R_25">Volatility 25 Index (2s)</option>
+                  <option value="R_50">Volatility 50 Index (1s)</option>
+                  <option value="R_75">Volatility 75 Index (1s)</option>
+                  <option value="R_100">Volatility 100 Index (2s)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Contract Duration (seconds)</label>
+                <select
+                  value={contractDuration}
+                  onChange={(e) => setContractDuration(e.target.value)}
+                  className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value="180">3 minutes (180s) - Ranging/Fast</option>
+                  <option value="240">4 minutes (240s) - Uncertain</option>
+                  <option value="300">5 minutes (300s) - Trending (Recommended)</option>
+                  <option value="360">6 minutes (360s)</option>
+                  <option value="420">7 minutes (420s)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Trending: 5min | Ranging: 3min | Uncertain: 4min
+                </p>
+              </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Take Profit Target</label>
                 <input
@@ -179,6 +222,8 @@ export function ControlPanel({
               <button
                 onClick={() => {
                   onUpdateSettings({
+                    symbol: symbol,
+                    trade_duration: parseInt(contractDuration) || 300,
                     max_daily_profit_target: parseFloat(profitTarget) || 200,
                     max_session_loss: parseFloat(sessionLoss) || 100,
                   });
