@@ -42,7 +42,7 @@ export function ControlPanel({
   const [profitTarget, setProfitTarget] = useState(currentSettings?.max_daily_profit_target?.toString() || '200');
   const [sessionLoss, setSessionLoss] = useState(currentSettings?.max_session_loss?.toString() || '100');
   const [contractDuration, setContractDuration] = useState(currentSettings?.trade_duration?.toString() || '300');
-  const [symbol, setSymbol] = useState(currentSettings?.symbol || 'R_75');
+  const [symbol, setSymbol] = useState(currentSettings?.symbol || '1HZ75V');
 
   const handleStart = () => {
     if (apiToken.trim()) {
@@ -175,14 +175,14 @@ export function ControlPanel({
                   onChange={(e) => setSymbol(e.target.value)}
                   className="w-full px-3 py-2 bg-deriv-dark border border-deriv-light rounded text-sm focus:outline-none focus:border-blue-500"
                 >
-                  <option value="R_10">Volatility 10 (1s) Index</option>
-                  <option value="R_25">Volatility 25 (1s) Index</option>
-                  <option value="R_50">Volatility 50 (1s) Index</option>
-                  <option value="R_75">Volatility 75 (1s) Index</option>
-                  <option value="R_100">Volatility 100 (1s) Index</option>
+                  <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                  <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                  <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                  <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                  <option value="1HZ100V">Volatility 100 (1s) Index</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  All use 1-second tick frequency for optimal M1 candles
+                  1-second tick indices for optimal M1 candle formation
                 </p>
               </div>
               <div>
