@@ -230,7 +230,12 @@ class TechnicalIndicators:
         logger.debug(f"ADX Calculation Details - Last 5 High: {df['high'].tail(5).tolist()}")
         logger.debug(f"ADX Calculation Details - Last 5 Low: {df['low'].tail(5).tolist()}")
         logger.debug(f"ADX Calculation Details - Last 5 Close: {df['close'].tail(5).tolist()}")
-        logger.info(f"ADX Components - ADX: {adx:.1f}, +DI: {plus_di:.1f}, -DI: {minus_di:.1f}")
+        logger.info(f"ADX Components - ADX: {adx:.2f}, +DI: {plus_di:.2f}, -DI: {minus_di:.2f}")
+        
+        # Log last 5 ADX values to see the trend
+        if len(adx_series) >= 5:
+            last_5_adx = adx_series.tail(5).tolist()
+            logger.debug(f"Last 5 ADX values: {[f'{v:.2f}' for v in last_5_adx]}")
         
         # ADX Slope - measure trend strength change over last 3 periods
         adx_slope = adx_series.iloc[-1] - adx_series.iloc[-4] if len(adx_series) >= 4 else 0

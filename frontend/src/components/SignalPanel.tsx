@@ -120,7 +120,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
                 signal.indicators.m5.adx > 25 ? 'text-deriv-green' :
                 signal.indicators.m5.adx < 20 ? 'text-yellow-500' : 'text-gray-300'
               }`}>
-                {signal.indicators.m5.adx.toFixed(1)}
+                {signal.indicators.m5.adx.toFixed(2)}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {signal.indicators.m5.adx > 25 ? 'Trending' : signal.indicators.m5.adx < 20 ? 'Ranging' : 'Neutral'}
@@ -129,14 +129,14 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">+DI</p>
               <p className="text-2xl font-bold text-deriv-green">
-                {signal.indicators.m5.plus_di.toFixed(1)}
+                {signal.indicators.m5.plus_di.toFixed(2)}
               </p>
               <p className="text-xs text-gray-400 mt-1">Bullish</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">-DI</p>
               <p className="text-2xl font-bold text-deriv-red">
-                {signal.indicators.m5.minus_di.toFixed(1)}
+                {signal.indicators.m5.minus_di.toFixed(2)}
               </p>
               <p className="text-xs text-gray-400 mt-1">Bearish</p>
             </div>
