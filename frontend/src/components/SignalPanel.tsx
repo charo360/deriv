@@ -62,6 +62,172 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
         </div>
       </div>
 
+      {/* Trade Setup Progress - Interactive Indicator Status */}
+      {signal.indicators && signal.indicators.m1 && signal.indicators.m5 && (
+        <div className="bg-deriv-dark rounded-lg p-4 mb-4 border border-deriv-light">
+          <h3 className="text-sm font-semibold mb-3 text-gray-300">🎯 Trade Setup Progress</h3>
+          
+          {/* RSI Gate Status */}
+          <div className="mb-3 pb-3 border-b border-deriv-light/30">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">RSI Gate</span>
+              <div className="flex items-center gap-2">
+                {signal.indicators.m1.rsi < 40 ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-deriv-green" />
+                    <span className="text-xs text-deriv-green font-semibold">RISE Ready ({signal.indicators.m1.rsi.toFixed(1)})</span>
+                  </>
+                ) : signal.indicators.m1.rsi > 60 ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-deriv-red" />
+                    <span className="text-xs text-deriv-red font-semibold">FALL Ready ({signal.indicators.m1.rsi.toFixed(1)})</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs text-gray-400">Waiting (RSI: {signal.indicators.m1.rsi.toFixed(1)})</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Indicator Confirmations */}
+          {(signal.indicators.m1.rsi < 40 || signal.indicators.m1.rsi > 60) && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-400 mb-2">Waiting for confirmations:</p>
+              
+              {/* Bollinger Bands */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Bollinger Bands</span>
+                {signal.indicators.m1.rsi < 40 ? (
+                  // RISE: Check if in lower 30%
+                  ((signal.indicators.m5.close - signal.indicators.m5.bb_lower) / (signal.indicators.m5.bb_upper - signal.indicators.m5.bb_lower)) < 0.30 ? (
+                    <span className="text-deriv-green flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Lower Zone
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Not in zone
+                    </span>
+                  )
+                ) : (
+                  // FALL: Check if in upper 30%
+                  ((signal.indicators.m5.close - signal.indicators.m5.bb_lower) / (signal.indicators.m5.bb_upper - signal.indicators.m5.bb_lower)) > 0.70 ? (
+                    <span className="text-deriv-red flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Upper Zone
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Not in zone
+                    </span>
+                  )
+                )}
+              </div>
+
+              {/* Stochastic */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Stochastic Cross</span>
+                {signal.indicators.m1.rsi < 40 ? (
+                  // RISE: Check bullish cross
+                  signal.indicators.m1.stoch_k > signal.indicators.m1.stoch_d && signal.indicators.m1.stoch_k < 50 ? (
+                    <span className="text-deriv-green flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Bullish
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Waiting
+                    </span>
+                  )
+                ) : (
+                  // FALL: Check bearish cross
+                  signal.indicators.m1.stoch_k < signal.indicators.m1.stoch_d && signal.indicators.m1.stoch_k > 50 ? (
+                    <span className="text-deriv-red flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Bearish
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Waiting
+                    </span>
+                  )
+                )}
+              </div>
+
+              {/* MACD */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">MACD Momentum</span>
+                {signal.indicators.m1.rsi < 40 ? (
+                  // RISE: Check bullish MACD
+                  signal.indicators.m5.macd_histogram > 0 ? (
+                    <span className="text-deriv-green flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Bullish
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Waiting
+                    </span>
+                  )
+                ) : (
+                  // FALL: Check bearish MACD
+                  signal.indicators.m5.macd_histogram < 0 ? (
+                    <span className="text-deriv-red flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Bearish
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Waiting
+                    </span>
+                  )
+                )}
+              </div>
+
+              {/* ADX */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">M1 ADX (Momentum)</span>
+                {signal.indicators.m1.adx < 20 ? (
+                  <span className="text-yellow-500 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> Low ({signal.indicators.m1.adx.toFixed(1)})
+                  </span>
+                ) : signal.indicators.m1.adx < 25 ? (
+                  <span className="text-gray-400 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> OK ({signal.indicators.m1.adx.toFixed(1)})
+                  </span>
+                ) : (
+                  <span className="text-gray-500 flex items-center gap-1">
+                    <XCircle className="w-3 h-3" /> High ({signal.indicators.m1.adx.toFixed(1)})
+                  </span>
+                )}
+              </div>
+
+              {/* Confidence Progress Bar */}
+              <div className="mt-3 pt-3 border-t border-deriv-light/30">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-gray-400">Confidence</span>
+                  <span className={`font-semibold ${
+                    signal.confidence >= 60 ? 'text-deriv-green' : 'text-yellow-500'
+                  }`}>
+                    {signal.confidence}% / 60%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      signal.confidence >= 60 ? 'bg-deriv-green' : 'bg-yellow-500'
+                    }`}
+                    style={{ width: `${Math.min(signal.confidence, 100)}%` }}
+                  />
+                </div>
+                {signal.confidence < 60 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Need {60 - signal.confidence}% more confidence to trigger
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* RSI Display - M1 (matches Deriv platform) */}
       {signal.indicators && signal.indicators.m1 && signal.indicators.m5 && (
         <div className="bg-deriv-dark rounded-lg p-3 mb-4 border border-deriv-light">
