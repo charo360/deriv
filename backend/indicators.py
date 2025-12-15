@@ -226,6 +226,12 @@ class TechnicalIndicators:
         plus_di = adx_indicator.adx_pos().iloc[-1]
         minus_di = adx_indicator.adx_neg().iloc[-1]
         
+        # Log ADX calculation details
+        logger.debug(f"ADX Calculation Details - Last 5 High: {df['high'].tail(5).tolist()}")
+        logger.debug(f"ADX Calculation Details - Last 5 Low: {df['low'].tail(5).tolist()}")
+        logger.debug(f"ADX Calculation Details - Last 5 Close: {df['close'].tail(5).tolist()}")
+        logger.info(f"ADX Components - ADX: {adx:.1f}, +DI: {plus_di:.1f}, -DI: {minus_di:.1f}")
+        
         # ADX Slope - measure trend strength change over last 3 periods
         adx_slope = adx_series.iloc[-1] - adx_series.iloc[-4] if len(adx_series) >= 4 else 0
         adx_rising = adx_slope > 1.0   # ADX increased by more than 1 point
