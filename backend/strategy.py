@@ -466,6 +466,23 @@ class HybridAdaptiveStrategy:
             confidence += 10
             confluence_factors.append("Full trend pullback confluence!")
         
+        # CRITICAL: Require M1 entry trigger confirmation to avoid early entries
+        # Don't trade just because confidence is high - wait for actual reversal signal
+        if not m1_confirmed:
+            confluence_factors.append("⚠ Waiting for M1 entry trigger (Stochastic cross or reversal pattern)")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=confidence,  # Show confidence but don't trigger
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=m5_confirmed,
+                m15_confirmed=m15_confirmed,
+                market_mode=market_mode.value
+            )
+        
         return TradeSignal(
             signal=Signal.RISE if confidence >= 60 else Signal.NONE,
             confidence=min(confidence, 100),
@@ -590,6 +607,23 @@ class HybridAdaptiveStrategy:
         if m15_confirmed and m5_confirmed and m1_confirmed:
             confidence += 10
             confluence_factors.append("Full trend pullback confluence!")
+        
+        # CRITICAL: Require M1 entry trigger confirmation to avoid early entries
+        # Don't trade just because confidence is high - wait for actual reversal signal
+        if not m1_confirmed:
+            confluence_factors.append("⚠ Waiting for M1 entry trigger (Stochastic cross or reversal pattern)")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=confidence,  # Show confidence but don't trigger
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=m5_confirmed,
+                m15_confirmed=m15_confirmed,
+                market_mode=market_mode.value
+            )
         
         return TradeSignal(
             signal=Signal.FALL if confidence >= 60 else Signal.NONE,
