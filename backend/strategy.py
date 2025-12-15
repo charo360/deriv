@@ -270,20 +270,29 @@ class HybridAdaptiveStrategy:
             rise_signal = self._check_mean_reversion_rise(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
             fall_signal = self._check_mean_reversion_fall(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
         else:
-            # Uncertain - wait for clearer setup
-            logger.info("Market mode UNCERTAIN - waiting for clearer setup")
-            return TradeSignal(
-                signal=Signal.NONE,
-                confidence=0,
-                timestamp=datetime.now(pytz.UTC),
-                price=ind_m1.close,
-                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
-                confluence_factors=[f"Market uncertain (ADX={ind_m5.adx:.2f}) - waiting"],
-                m1_confirmed=False,
-                m5_confirmed=False,
-                m15_confirmed=False,
-                market_mode=market_mode.value
-            )
+            # UNCERTAIN mode - check both trend and mean reversion, use whichever has higher confidence
+            logger.info(f"Market mode UNCERTAIN (ADX={ind_m5.adx:.2f}) - checking all signal types")
+            
+            # Check trend-following signals based on current trend direction
+            if ind_m5.trend_down:
+                fall_trend = self._check_trend_pullback_fall(ind_m1, ind_m5, ind_m15, patterns, market_mode)
+                rise_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            elif ind_m5.trend_up:
+                rise_trend = self._check_trend_pullback_rise(ind_m1, ind_m5, ind_m15, patterns, market_mode)
+                fall_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            else:
+                rise_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+                fall_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            
+            # Also check mean reversion signals
+            rise_mr = self._check_mean_reversion_rise(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
+            fall_mr = self._check_mean_reversion_fall(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
+            
+            # Use the stronger signal from each direction
+            rise_signal = rise_trend if rise_trend.confidence > rise_mr.confidence else rise_mr
+            fall_signal = fall_trend if fall_trend.confidence > fall_mr.confidence else fall_mr
+            
+            logger.info(f"UNCERTAIN mode - RISE: {rise_signal.confidence}%, FALL: {fall_signal.confidence}%")
         
         logger.info(f"RISE confidence: {rise_signal.confidence}, FALL confidence: {fall_signal.confidence}")
         
