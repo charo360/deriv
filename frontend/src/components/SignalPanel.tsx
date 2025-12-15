@@ -72,7 +72,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
                 signal.indicators.m1.rsi < 35 ? 'text-deriv-green' :
                 signal.indicators.m1.rsi > 65 ? 'text-deriv-red' : 'text-yellow-500'
               }`}>
-                {signal.indicators.m1.rsi.toFixed(1)}
+                {signal.indicators.m1.rsi.toFixed(2)}
               </p>
             </div>
             <div className="text-right text-sm">
@@ -104,7 +104,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             <span className={`font-medium ${
               signal.indicators.m5.rsi < 35 ? 'text-deriv-green' :
               signal.indicators.m5.rsi > 65 ? 'text-deriv-red' : 'text-gray-300'
-            }`}>{signal.indicators.m5.rsi.toFixed(1)}</span>
+            }`}>{signal.indicators.m5.rsi.toFixed(2)}</span>
           </div>
         </div>
       )}
@@ -247,7 +247,7 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
                 signal.indicators.m5.rsi < 35 ? 'text-deriv-green' :
                 signal.indicators.m5.rsi > 65 ? 'text-deriv-red' : 'text-gray-300'
               }`}>
-                {signal.indicators.m5.rsi.toFixed(1)}
+                {signal.indicators.m5.rsi.toFixed(2)}
               </span>
             </div>
             <div>
