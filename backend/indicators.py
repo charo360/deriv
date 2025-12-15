@@ -272,6 +272,12 @@ class TechnicalIndicators:
         stoch_k = stoch.stoch().iloc[-1]
         stoch_d = stoch.stoch_signal().iloc[-1]
         
+        # Log Stochastic calculation details
+        logger.debug(f"Stochastic Calculation - Last 5 High: {df['high'].tail(5).tolist()}")
+        logger.debug(f"Stochastic Calculation - Last 5 Low: {df['low'].tail(5).tolist()}")
+        logger.debug(f"Stochastic Calculation - Last 5 Close: {df['close'].tail(5).tolist()}")
+        logger.info(f"Stochastic - %K: {stoch_k:.2f}, %D: {stoch_d:.2f}")
+        
         # EMA 200
         ema = ta.trend.EMAIndicator(
             close=df['close'],
