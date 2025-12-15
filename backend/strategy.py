@@ -441,29 +441,41 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M5: Not in lower BB zone (BB%={bb_percent:.2f}) - waiting for BB% < 0.30")
         
         # M1 ADX: Check if pullback is losing momentum (ADX falling on M1)
+        m1_indicator_count = 0
         if ind_m1.adx < 20:
             confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - pullback weak, ready to resume trend")
             confidence += 10
+            m1_indicator_count += 1
         elif ind_m1.adx_falling:
             confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.2f}) - pullback exhausting")
             confidence += 8
+            m1_indicator_count += 1
         elif ind_m1.adx > 25:
             confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.2f}) - pullback has momentum, caution")
             confidence -= 5
         
-        # M1: Entry trigger
-        # Stochastic turning up
+        # M1: MACD bullish confirmation
+        if ind_m1.macd_bullish or ind_m1.macd_histogram > 0:
+            confluence_factors.append(f"M1: MACD bullish (histogram={ind_m1.macd_histogram:.4f})")
+            confidence += 10
+            m1_indicator_count += 1
+        
+        # M1: Entry trigger - Stochastic turning up
         if ind_m1.stoch_k > ind_m1.stoch_d and ind_m1.stoch_k < 50:
             confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
-            m1_confirmed = True
+            m1_indicator_count += 1
         
         # Bullish candle patterns
         if patterns.get('hammer') or patterns.get('engulfing_bullish'):
             pattern_name = 'Hammer' if patterns.get('hammer') else 'Bullish engulfing'
             confluence_factors.append(f"M1: {pattern_name} pattern")
             confidence += 15
-            m1_confirmed = True
+            m1_indicator_count += 1
+        
+        # CRITICAL: Require at least 2 M1 indicators to confirm direction
+        # Don't trade on Stochastic cross alone - need confirmation from other M1 indicators
+        m1_confirmed = m1_indicator_count >= 2
         
         # Bonus for full confluence in trend
         if m15_confirmed and m5_confirmed and m1_confirmed:
@@ -471,9 +483,8 @@ class HybridAdaptiveStrategy:
             confluence_factors.append("Full trend pullback confluence!")
         
         # CRITICAL: Require M1 entry trigger confirmation to avoid early entries
-        # Don't trade just because confidence is high - wait for actual reversal signal
         if not m1_confirmed:
-            confluence_factors.append("⚠ Waiting for M1 entry trigger (Stochastic cross or reversal pattern)")
+            confluence_factors.append(f"⚠ Waiting for M1 confirmation ({m1_indicator_count}/2 indicators agree)")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=confidence,  # Show confidence but don't trigger
@@ -587,29 +598,41 @@ class HybridAdaptiveStrategy:
             confluence_factors.append(f"M5: Not in upper BB zone (BB%={bb_percent:.2f}) - waiting for BB% > 0.70")
         
         # M1 ADX: Check if rally is losing momentum (ADX falling on M1)
+        m1_indicator_count = 0
         if ind_m1.adx < 20:
             confluence_factors.append(f"M1: ADX low ({ind_m1.adx:.2f}) - rally weak, ready to resume trend")
             confidence += 10
+            m1_indicator_count += 1
         elif ind_m1.adx_falling:
             confluence_factors.append(f"M1: ADX falling ({ind_m1.adx:.2f}) - rally exhausting")
             confidence += 8
+            m1_indicator_count += 1
         elif ind_m1.adx > 25:
             confluence_factors.append(f"M1: ADX high ({ind_m1.adx:.2f}) - rally has momentum, caution")
             confidence -= 5
         
-        # M1: Entry trigger
-        # Stochastic turning down
+        # M1: MACD bearish confirmation
+        if ind_m1.macd_bearish or ind_m1.macd_histogram < 0:
+            confluence_factors.append(f"M1: MACD bearish (histogram={ind_m1.macd_histogram:.4f})")
+            confidence += 10
+            m1_indicator_count += 1
+        
+        # M1: Entry trigger - Stochastic turning down
         if ind_m1.stoch_k < ind_m1.stoch_d and ind_m1.stoch_k > 50:
             confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
             confidence += 15
-            m1_confirmed = True
+            m1_indicator_count += 1
         
         # Bearish candle patterns
         if patterns.get('shooting_star') or patterns.get('engulfing_bearish'):
             pattern_name = 'Shooting star' if patterns.get('shooting_star') else 'Bearish engulfing'
             confluence_factors.append(f"M1: {pattern_name} pattern")
             confidence += 15
-            m1_confirmed = True
+            m1_indicator_count += 1
+        
+        # CRITICAL: Require at least 2 M1 indicators to confirm direction
+        # Don't trade on Stochastic cross alone - need confirmation from other M1 indicators
+        m1_confirmed = m1_indicator_count >= 2
         
         # Bonus for full confluence in trend
         if m15_confirmed and m5_confirmed and m1_confirmed:
@@ -617,9 +640,8 @@ class HybridAdaptiveStrategy:
             confluence_factors.append("Full trend pullback confluence!")
         
         # CRITICAL: Require M1 entry trigger confirmation to avoid early entries
-        # Don't trade just because confidence is high - wait for actual reversal signal
         if not m1_confirmed:
-            confluence_factors.append("⚠ Waiting for M1 entry trigger (Stochastic cross or reversal pattern)")
+            confluence_factors.append(f"⚠ Waiting for M1 confirmation ({m1_indicator_count}/2 indicators agree)")
             return TradeSignal(
                 signal=Signal.NONE,
                 confidence=confidence,  # Show confidence but don't trigger
