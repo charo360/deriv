@@ -238,19 +238,19 @@ export function SignalPanel({ signal, pendingContract }: SignalPanelProps) {
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Upper</p>
               <p className="text-lg font-bold text-deriv-red">
-                {signal.indicators.m5.bb_upper.toFixed(5)}
+                {signal.indicators.m5.bb_upper.toFixed(4)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Middle (SMA)</p>
               <p className="text-lg font-bold text-gray-300">
-                {signal.indicators.m5.bb_middle.toFixed(5)}
+                {signal.indicators.m5.bb_middle.toFixed(4)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-400 mb-1">Lower</p>
               <p className="text-lg font-bold text-deriv-green">
-                {signal.indicators.m5.bb_lower.toFixed(5)}
+                {signal.indicators.m5.bb_lower.toFixed(4)}
               </p>
             </div>
           </div>
