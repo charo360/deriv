@@ -513,7 +513,16 @@ class TechnicalIndicators:
             dict with pattern signals
         """
         if len(candles) < 3:
-            return {'hammer': False, 'shooting_star': False, 'engulfing_bullish': False, 'engulfing_bearish': False}
+            return {
+                'hammer': False,
+                'shooting_star': False,
+                'engulfing_bullish': False,
+                'engulfing_bearish': False,
+                'bullish_close': False,
+                'bearish_close': False,
+                'break_prev_high': False,
+                'break_prev_low': False,
+            }
         
         current = candles[-1]
         prev = candles[-2]
@@ -550,10 +559,19 @@ class TechnicalIndicators:
             c < o and  # Current bearish
             o > prev_c and c < prev_o  # Engulfs previous
         )
+
+        bullish_close = c > o and c > prev_c
+        bearish_close = c < o and c < prev_c
+        break_prev_high = h > float(prev['high'])
+        break_prev_low = l < float(prev['low'])
         
         return {
             'hammer': hammer,
             'shooting_star': shooting_star,
             'engulfing_bullish': engulfing_bullish,
-            'engulfing_bearish': engulfing_bearish
+            'engulfing_bearish': engulfing_bearish,
+            'bullish_close': bullish_close,
+            'bearish_close': bearish_close,
+            'break_prev_high': break_prev_high,
+            'break_prev_low': break_prev_low,
         }

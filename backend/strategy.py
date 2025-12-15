@@ -274,10 +274,10 @@ class HybridAdaptiveStrategy:
             logger.info(f"Market mode UNCERTAIN (ADX={ind_m5.adx:.2f}) - checking all signal types")
             
             # Check trend-following signals based on current trend direction
-            if ind_m5.trend_down:
+            if ind_m5.trend_down and ind_m15.trend_down:
                 fall_trend = self._check_trend_pullback_fall(ind_m1, ind_m5, ind_m15, patterns, market_mode)
                 rise_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
-            elif ind_m5.trend_up:
+            elif ind_m5.trend_up and ind_m15.trend_up:
                 rise_trend = self._check_trend_pullback_rise(ind_m1, ind_m5, ind_m15, patterns, market_mode)
                 fall_trend = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
             else:
@@ -462,9 +462,12 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger - Stochastic turning up
         if ind_m1.stoch_k > ind_m1.stoch_d and ind_m1.stoch_k < 50:
-            confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
-            confidence += 15
-            m1_indicator_count += 1
+            if patterns.get('bullish_close') or patterns.get('break_prev_high'):
+                confluence_factors.append(f"M1: Stochastic bullish cross ({ind_m1.stoch_k:.2f})")
+                confidence += 15
+                m1_indicator_count += 1
+            else:
+                confluence_factors.append(f"M1: Stoch bullish cross ({ind_m1.stoch_k:.2f}) - waiting price confirmation")
         
         # Bullish candle patterns
         if patterns.get('hammer') or patterns.get('engulfing_bullish'):
@@ -619,9 +622,12 @@ class HybridAdaptiveStrategy:
         
         # M1: Entry trigger - Stochastic turning down
         if ind_m1.stoch_k < ind_m1.stoch_d and ind_m1.stoch_k > 50:
-            confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
-            confidence += 15
-            m1_indicator_count += 1
+            if patterns.get('bearish_close') or patterns.get('break_prev_low'):
+                confluence_factors.append(f"M1: Stochastic bearish cross ({ind_m1.stoch_k:.2f})")
+                confidence += 15
+                m1_indicator_count += 1
+            else:
+                confluence_factors.append(f"M1: Stoch bearish cross ({ind_m1.stoch_k:.2f}) - waiting price confirmation")
         
         # Bearish candle patterns
         if patterns.get('shooting_star') or patterns.get('engulfing_bearish'):
