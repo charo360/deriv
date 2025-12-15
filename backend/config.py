@@ -37,7 +37,7 @@ class TradingConfig(BaseModel):
     rsi_period: int = 14
     rsi_oversold: float = 30.0
     rsi_overbought: float = 70.0
-    stochastic_k: int = 5
+    stochastic_k: int = 14
     stochastic_d: int = 3
     stochastic_smooth: int = 3
     stochastic_oversold: float = 20.0
