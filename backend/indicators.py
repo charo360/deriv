@@ -85,7 +85,8 @@ class TechnicalIndicators:
         stochastic_smooth: int = 3,
         stochastic_oversold: float = 20.0,
         stochastic_overbought: float = 80.0,
-        ema_period: int = 200
+        ema_period: int = 200,
+        adx_period: int = 14
     ):
         self.bollinger_period = bollinger_period
         self.bollinger_std = bollinger_std
@@ -98,6 +99,7 @@ class TechnicalIndicators:
         self.stochastic_oversold = stochastic_oversold
         self.stochastic_overbought = stochastic_overbought
         self.ema_period = ema_period
+        self.adx_period = adx_period
     
     def _calculate_wilder_rsi(self, close_prices: pd.Series, period: int = 14) -> float:
         """
@@ -133,6 +135,76 @@ class TechnicalIndicators:
         logger.debug(f"RSI Details - AvgGain: {avg_gain:.4f}, AvgLoss: {avg_loss:.4f}, RS: {rs:.4f}, RSI: {rsi:.2f}")
         
         return rsi
+    
+    def _calculate_wilder_adx(self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> tuple:
+        """
+        Calculate ADX, +DI, -DI using Wilder's smoothing method.
+        This matches the standard ADX calculation used by most trading platforms.
+        """
+        # Calculate True Range (TR)
+        high_low = high - low
+        high_close = abs(high - close.shift(1))
+        low_close = abs(low - close.shift(1))
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        
+        # Calculate Directional Movement
+        high_diff = high.diff()
+        low_diff = -low.diff()
+        
+        plus_dm = pd.Series(0.0, index=high.index)
+        minus_dm = pd.Series(0.0, index=high.index)
+        
+        plus_dm[(high_diff > low_diff) & (high_diff > 0)] = high_diff
+        minus_dm[(low_diff > high_diff) & (low_diff > 0)] = low_diff
+        
+        # Wilder's smoothing for TR, +DM, -DM
+        # First value is sum of first 'period' values
+        atr = tr.rolling(window=period).sum().iloc[period-1]
+        smoothed_plus_dm = plus_dm.rolling(window=period).sum().iloc[period-1]
+        smoothed_minus_dm = minus_dm.rolling(window=period).sum().iloc[period-1]
+        
+        # Subsequent values use Wilder's smoothing: prev - (prev/period) + current
+        plus_di_values = []
+        minus_di_values = []
+        dx_values = []
+        
+        for i in range(period, len(tr)):
+            atr = atr - (atr / period) + tr.iloc[i]
+            smoothed_plus_dm = smoothed_plus_dm - (smoothed_plus_dm / period) + plus_dm.iloc[i]
+            smoothed_minus_dm = smoothed_minus_dm - (smoothed_minus_dm / period) + minus_dm.iloc[i]
+            
+            # Calculate +DI and -DI
+            plus_di = 100 * (smoothed_plus_dm / atr) if atr != 0 else 0
+            minus_di = 100 * (smoothed_minus_dm / atr) if atr != 0 else 0
+            
+            plus_di_values.append(plus_di)
+            minus_di_values.append(minus_di)
+            
+            # Calculate DX
+            di_diff = abs(plus_di - minus_di)
+            di_sum = plus_di + minus_di
+            dx = 100 * (di_diff / di_sum) if di_sum != 0 else 0
+            dx_values.append(dx)
+        
+        # Calculate ADX (smoothed DX using Wilder's method)
+        if len(dx_values) >= period:
+            # First ADX is simple average of first 'period' DX values
+            adx = sum(dx_values[:period]) / period
+            
+            # Subsequent ADX values use Wilder's smoothing
+            for i in range(period, len(dx_values)):
+                adx = (adx * (period - 1) + dx_values[i]) / period
+        else:
+            adx = dx_values[-1] if dx_values else 0
+        
+        # Use the last calculated +DI and -DI
+        plus_di = plus_di_values[-1] if plus_di_values else 0
+        minus_di = minus_di_values[-1] if minus_di_values else 0
+        
+        logger.debug(f"Wilder ADX - ATR: {atr:.2f}, +DM: {smoothed_plus_dm:.2f}, -DM: {smoothed_minus_dm:.2f}")
+        logger.debug(f"Wilder ADX - +DI: {plus_di:.2f}, -DI: {minus_di:.2f}, DX: {dx_values[-1] if dx_values else 0:.2f}, ADX: {adx:.2f}")
+        
+        return adx, plus_di, minus_di
     
     def calculate(self, candles: List[dict]) -> Optional[IndicatorValues]:
         """
@@ -214,33 +286,25 @@ class TechnicalIndicators:
         )
         ema_50 = ema_50_ind.ema_indicator().iloc[-1]
         
-        # ADX - Average Directional Index for trend strength
-        adx_indicator = ta.trend.ADXIndicator(
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            window=14
+        # ADX - Average Directional Index for trend strength (using custom Wilder's method)
+        adx, plus_di, minus_di = self._calculate_wilder_adx(
+            df['high'], 
+            df['low'], 
+            df['close'], 
+            self.adx_period
         )
-        adx_series = adx_indicator.adx()
-        adx = adx_series.iloc[-1]
-        plus_di = adx_indicator.adx_pos().iloc[-1]
-        minus_di = adx_indicator.adx_neg().iloc[-1]
         
         # Log ADX calculation details
         logger.debug(f"ADX Calculation Details - Last 5 High: {df['high'].tail(5).tolist()}")
         logger.debug(f"ADX Calculation Details - Last 5 Low: {df['low'].tail(5).tolist()}")
         logger.debug(f"ADX Calculation Details - Last 5 Close: {df['close'].tail(5).tolist()}")
-        logger.info(f"ADX Components - ADX: {adx:.2f}, +DI: {plus_di:.2f}, -DI: {minus_di:.2f}")
+        logger.info(f"ADX Components (Wilder's) - ADX: {adx:.2f}, +DI: {plus_di:.2f}, -DI: {minus_di:.2f}")
         
-        # Log last 5 ADX values to see the trend
-        if len(adx_series) >= 5:
-            last_5_adx = adx_series.tail(5).tolist()
-            logger.debug(f"Last 5 ADX values: {[f'{v:.2f}' for v in last_5_adx]}")
-        
-        # ADX Slope - measure trend strength change over last 3 periods
-        adx_slope = adx_series.iloc[-1] - adx_series.iloc[-4] if len(adx_series) >= 4 else 0
-        adx_rising = adx_slope > 1.0   # ADX increased by more than 1 point
-        adx_falling = adx_slope < -1.0  # ADX decreased by more than 1 point
+        # ADX Slope - for now set to 0 since we're using custom calculation
+        # TODO: Track ADX history to calculate slope
+        adx_slope = 0
+        adx_rising = False
+        adx_falling = False
         
         # MACD - Momentum confirmation
         macd_indicator = ta.trend.MACD(
