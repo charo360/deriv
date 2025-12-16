@@ -9,6 +9,7 @@ import logging
 
 from indicators import TechnicalIndicators, IndicatorValues
 from config import trading_config
+from support_resistance import SupportResistance
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,9 @@ class HybridAdaptiveStrategy:
             stochastic_overbought=trading_config.stochastic_overbought,
             ema_period=trading_config.ema_period
         )
+        
+        # Support & Resistance detector for UNCERTAIN mode
+        self.sr_detector = SupportResistance(lookback_candles=50, touch_tolerance=0.002)
         
         self.last_signal_time: Optional[datetime] = None
         self.min_signal_interval = 60  # Minimum seconds between signals
@@ -259,16 +263,20 @@ class HybridAdaptiveStrategy:
             # Don't block trades entirely, just reduce confidence
             # The squeeze will be factored into the confidence calculation
         
-        # Generate signals based on market mode
+        # OPTIMIZATION: Only trade in UNCERTAIN mode (68.5% win-rate)
+        # Block TRENDING_UP (30% win-rate), TRENDING_DOWN (50%), and RANGING (48%)
         if market_mode == MarketMode.TRENDING_UP:
-            rise_signal = self._check_trend_pullback_rise(ind_m1, ind_m5, ind_m15, patterns, market_mode)
-            fall_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)  # Don't short in uptrend
+            logger.info(f"BLOCKED: TRENDING_UP mode (30% win-rate) - only trading UNCERTAIN mode")
+            rise_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            fall_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
         elif market_mode == MarketMode.TRENDING_DOWN:
-            fall_signal = self._check_trend_pullback_fall(ind_m1, ind_m5, ind_m15, patterns, market_mode)
-            rise_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)  # Don't long in downtrend
+            logger.info(f"BLOCKED: TRENDING_DOWN mode (50% win-rate) - only trading UNCERTAIN mode")
+            rise_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            fall_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
         elif market_mode == MarketMode.RANGING:
-            rise_signal = self._check_mean_reversion_rise(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
-            fall_signal = self._check_mean_reversion_fall(ind_m1, ind_m5, ind_m15, divergence, patterns, market_mode)
+            logger.info(f"BLOCKED: RANGING mode (48% win-rate) - only trading UNCERTAIN mode")
+            rise_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
+            fall_signal = self._empty_signal(ind_m1, ind_m5, ind_m15, market_mode)
         else:
             # UNCERTAIN mode - check both trend and mean reversion, use whichever has higher confidence
             logger.info(f"Market mode UNCERTAIN (ADX={ind_m5.adx:.2f}) - checking all signal types")
@@ -308,13 +316,61 @@ class HybridAdaptiveStrategy:
         rise_timeframes_agree = sum([rise_signal.m1_confirmed, rise_signal.m5_confirmed, rise_signal.m15_confirmed])
         fall_timeframes_agree = sum([fall_signal.m1_confirmed, fall_signal.m5_confirmed, fall_signal.m15_confirmed])
         
-        # Return the stronger signal (minimum 60% confidence + 2/3 timeframe confluence)
-        if rise_adjusted > fall_adjusted and rise_adjusted >= 60 and rise_timeframes_agree >= 2:
+        # OPTIMIZATION: Stricter thresholds based on market mode to improve win-rate
+        min_threshold_rise = 60  # Default for CALL/RISE
+        min_threshold_fall = 60  # Default for PUT/FALL
+        threshold_reason = []
+        
+        # RANGING mode requires higher confidence (52% win-rate baseline, needs filtering)
+        if market_mode == MarketMode.RANGING:
+            min_threshold_rise = 90  # Raised from 60% - RANGING is weak, only take high-confidence
+            min_threshold_fall = 90
+            threshold_reason.append(f"RANGING mode: Requires 90%+ confidence (weak mode)")
+        
+        # UNCERTAIN mode requires moderate confidence (75% win-rate, but has 4-loss streaks at low conf)
+        elif market_mode == MarketMode.UNCERTAIN:
+            # UNCERTAIN CALL requires higher confidence than PUT (70% CALL streaks identified)
+            min_threshold_rise = 75  # CALL trades need 75%+ to avoid loss streaks
+            min_threshold_fall = 70  # PUT trades can use 70%+
+            threshold_reason.append(f"UNCERTAIN mode: CALL >= 75%, PUT >= 70%")
+        
+        # Final confidence check with direction-specific thresholds
+        rise_passes = rise_adjusted >= min_threshold_rise
+        fall_passes = fall_adjusted >= min_threshold_fall
+        
+        if not rise_passes and not fall_passes:
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=threshold_reason + [
+                    f"BLOCKED: RISE {rise_adjusted:.0f}% < {min_threshold_rise}%, FALL {fall_adjusted:.0f}% < {min_threshold_fall}%"
+                ],
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
+        
+        # Return the stronger signal that passes threshold + 2/3 timeframe confluence
+        if rise_adjusted > fall_adjusted and rise_passes and rise_timeframes_agree >= 2:
             # Update confluence factors with time info
             rise_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: RISE with {rise_adjusted}% confidence ({market_mode.value})")
             return rise_signal
-        elif fall_adjusted > rise_adjusted and fall_adjusted >= 60 and fall_timeframes_agree >= 2:
+        elif fall_adjusted > rise_adjusted and fall_passes and fall_timeframes_agree >= 2:
+            fall_signal.confluence_factors.append(time_reason)
+            logger.info(f">>> SELECTED: FALL with {fall_adjusted}% confidence ({market_mode.value})")
+            return fall_signal
+        elif rise_passes and rise_timeframes_agree >= 2:
+            # RISE passes but FALL doesn't, or they're equal
+            rise_signal.confluence_factors.append(time_reason)
+            logger.info(f">>> SELECTED: RISE with {rise_adjusted}% confidence ({market_mode.value})")
+            return rise_signal
+        elif fall_passes and fall_timeframes_agree >= 2:
+            # FALL passes but RISE doesn't
             fall_signal.confluence_factors.append(time_reason)
             logger.info(f">>> SELECTED: FALL with {fall_adjusted}% confidence ({market_mode.value})")
             return fall_signal
@@ -958,6 +1014,38 @@ class HybridAdaptiveStrategy:
         if divergence.get('bearish_divergence'):
             confluence_factors.append("M5: Bearish RSI divergence")
             confidence += 15
+        
+        # VOLATILITY FILTER: Block PUT if ATR is expanding (breakout risk)
+        if ind_m5.atr_expanding:
+            confluence_factors.append(f"BLOCKED: ATR expanding (volatility breakout) - PUT rejected")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
+        
+        # MOMENTUM FILTER: Block PUT if strong upward momentum (buyers in control)
+        if ind_m5.strong_upward_momentum:
+            confluence_factors.append(f"BLOCKED: Strong upward momentum (ROC={ind_m5.roc:.2f}%) - PUT rejected")
+            return TradeSignal(
+                signal=Signal.NONE,
+                confidence=0,
+                timestamp=datetime.now(pytz.UTC),
+                price=ind_m1.close,
+                indicators=self._format_indicators(ind_m1, ind_m5, ind_m15),
+                confluence_factors=confluence_factors,
+                m1_confirmed=False,
+                m5_confirmed=False,
+                m15_confirmed=False,
+                market_mode=market_mode.value
+            )
         
         # M1: Entry trigger
         if ind_m1.stoch_overbought and ind_m1.stoch_k < ind_m1.stoch_d:

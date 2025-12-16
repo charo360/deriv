@@ -68,6 +68,13 @@ class IndicatorValues:
     is_ranging: bool   # ADX < 20
     trend_up: bool     # +DI > -DI and price above EMA50
     trend_down: bool   # -DI > +DI and price below EMA50
+    
+    # Volatility & Momentum filters
+    atr: float              # Average True Range (volatility)
+    atr_expanding: bool     # True if ATR is expanding (high volatility breakout risk)
+    roc: float              # Rate of Change % (5-period momentum)
+    strong_upward_momentum: bool   # True if ROC > 0.5% (strong buying pressure)
+    strong_downward_momentum: bool # True if ROC < -0.5% (strong selling pressure)
 
 
 class TechnicalIndicators:
@@ -423,6 +430,34 @@ class TechnicalIndicators:
         trend_up = plus_di > minus_di and close > ema_50
         trend_down = minus_di > plus_di and close < ema_50
         
+        # ATR - Average True Range (volatility filter)
+        atr_indicator = ta.volatility.AverageTrueRange(
+            high=df['high'],
+            low=df['low'],
+            close=df['close'],
+            window=14
+        )
+        atr = atr_indicator.average_true_range().iloc[-1]
+        
+        # ATR expansion detection (compare current ATR to previous)
+        if len(df) >= 15:
+            prev_atr = atr_indicator.average_true_range().iloc[-2]
+            atr_expanding = atr > prev_atr * 1.1  # 10% expansion threshold
+        else:
+            atr_expanding = False
+        
+        # ROC - Rate of Change (momentum filter)
+        # 5-period ROC to detect strong directional momentum
+        if len(df) >= 6:
+            close_5_ago = df['close'].iloc[-6]
+            roc = ((close - close_5_ago) / close_5_ago) * 100
+        else:
+            roc = 0.0
+        
+        # Momentum thresholds
+        strong_upward_momentum = roc > 0.5    # >0.5% upward momentum
+        strong_downward_momentum = roc < -0.5  # <-0.5% downward momentum
+        
         return IndicatorValues(
             close=close,
             high=high,
@@ -460,7 +495,12 @@ class TechnicalIndicators:
             is_trending=is_trending,
             is_ranging=is_ranging,
             trend_up=trend_up,
-            trend_down=trend_down
+            trend_down=trend_down,
+            atr=atr,
+            atr_expanding=atr_expanding,
+            roc=roc,
+            strong_upward_momentum=strong_upward_momentum,
+            strong_downward_momentum=strong_downward_momentum
         )
     
     def detect_divergence(
